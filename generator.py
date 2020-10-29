@@ -63,65 +63,78 @@ class MarkovChain(object):
             current_state = next_state
         return future_states
 
-def generate(num_instances = 500, p = 0.5, seed0 = 0, seed1 = 1):
-    """
-    Generates list of sequences X and list of labels y.
-    
-    Parameters:
-        num_instances: the number of total instances to generate
-        p: positive (1) class prevalance
-        seed0: random seed for generating Markov transition matrix for class 0
-        seed1: random seed for generating Markov transition matrix for class 1
-    
-    Returns:
-        X - list of sequences of length num_instances
-        y - list of labels (0 or 1)
+class MarkovChainGenerator():
 
-    """
-    aa_list = list('ARNDCEQGHILKMFPSTWYV')
-    n = len(aa_list)
-    num1 = int(num_instances*p)
-    num0 = num_instances - num1
+    def __init__(self, num_instances = 500, p = 0.5, seed0 = 0, seed1 = 1):
+        self.num_instances = num_instances
+        self.p = p
+        self.seed0 = seed0
+        self.seed1 = seed1
+
+    def generate(self):
+        """
+        Generates list of sequences X and list of labels y.
+        
+        Parameters:
+            num_instances: the number of total instances to generate
+            p: positive (1) class prevalance
+            seed0: random seed for generating Markov transition matrix for class 0
+            seed1: random seed for generating Markov transition matrix for class 1
+        
+        Returns:
+            X - list of sequences of length num_instances
+            y - list of labels (0 or 1)
     
-    # Set transition matrices
-    np.random.seed(seed0)
-    m0 = np.random.rand(n, n)
-    for i in range(m0.shape[0]):
-        m0[i,:] = m0[i,:] / np.sum(m0[i,:])
-    
-    np.random.seed(seed1)
-    m1 = np.random.rand(n, n)
-    m1 = m1 / np.sum(m1)
-    for i in range(m1.shape[0]):
-        m1[i,:] = m1[i,:] / np.sum(m1[i,:])
-    
-    # Create Markov Chain objects
-    chain0 = MarkovChain(transition_matrix = m0, states = aa_list)
-    chain1 = MarkovChain(transition_matrix = m1, states = aa_list)
-    
-    X0 = []
-    for i in range(num0):
-        x0 = chain0.generate_states(current_state = random.choice(aa_list), no=100)
-        X0.append(''.join(x0))
-    
-    X1 = []
-    for i in range(num1):
-        x1 = chain1.generate_states(current_state = random.choice(aa_list), no=100)
-        X1.append(''.join(x1))
-    
-    # Create X and y lists
-    X = X0 + X1
-    y = list(np.zeros(num0, dtype=int)) + list(np.ones(num1, dtype=int))
-    
-    # Shuffle data
-    data = list(zip(X, y))
-    random.shuffle(data)
-    X, y = zip(*data)
-    
-    # Convert y to an array
-    y = np.array(y, dtype=int)
-    
-    return X, y, aa_list, m0, m1
+        """
+        num_instances = self.num_instances
+        p = self.p
+        seed0 = self.seed0
+        seed1 = self.seed1
+        
+        aa_list = list('ARNDCEQGHILKMFPSTWYV')
+        n = len(aa_list)
+        num1 = int(num_instances*p)
+        num0 = num_instances - num1
+        
+        # Set transition matrices
+        np.random.seed(seed0)
+        m0 = np.random.rand(n, n)
+        for i in range(m0.shape[0]):
+            m0[i,:] = m0[i,:] / np.sum(m0[i,:])
+        
+        np.random.seed(seed1)
+        m1 = np.random.rand(n, n)
+        m1 = m1 / np.sum(m1)
+        for i in range(m1.shape[0]):
+            m1[i,:] = m1[i,:] / np.sum(m1[i,:])
+        
+        # Create Markov Chain objects
+        chain0 = MarkovChain(transition_matrix = m0, states = aa_list)
+        chain1 = MarkovChain(transition_matrix = m1, states = aa_list)
+        
+        X0 = []
+        for i in range(num0):
+            x0 = chain0.generate_states(current_state = random.choice(aa_list), no=100)
+            X0.append(''.join(x0))
+        
+        X1 = []
+        for i in range(num1):
+            x1 = chain1.generate_states(current_state = random.choice(aa_list), no=100)
+            X1.append(''.join(x1))
+        
+        # Create X and y lists
+        X = X0 + X1
+        y = list(np.zeros(num0, dtype=int)) + list(np.ones(num1, dtype=int))
+        
+        # Shuffle data
+        data = list(zip(X, y))
+        random.shuffle(data)
+        X, y = zip(*data)
+        
+        # Convert y to an array
+        y = np.array(y, dtype=int)
+        
+        return X, y, aa_list, m0, m1
     
     
     
