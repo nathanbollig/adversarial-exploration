@@ -53,7 +53,7 @@ def create_LSTM(X_train, X_val, y_train, y_val):
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     
     # Train model
-    model.fit(X_train, y_train, epochs=50, batch_size=64, verbose=1)
+    model.fit(X_train, y_train, epochs=10, batch_size=64, verbose=1)
     
     # Evaluate on test set
     _, accuracy = model.evaluate(X_val, y_val, verbose=0)
@@ -74,6 +74,7 @@ def big_bang(num_instances=5000, p=0.5, seed0 = 0, seed1 = 1):
         model: trained Keras model
         X: list [X_train, X_val, X_test]
         y: list [y_train, y_val, y_test]
+        gen: generator object
     """
     # Generate data
     
@@ -94,7 +95,7 @@ def big_bang(num_instances=5000, p=0.5, seed0 = 0, seed1 = 1):
     # Define model
     model = create_LSTM(X_train, X_val, y_train, y_val)
     
-    return model, [X_train, X_val, X_test], [y_train, y_val, y_test]
+    return model, [X_train, X_val, X_test], [y_train, y_val, y_test], gen
 
 def main(name, num_instances=5000, p=0.5, seed0 = 0, seed1 = 1):
     """
@@ -103,7 +104,7 @@ def main(name, num_instances=5000, p=0.5, seed0 = 0, seed1 = 1):
         others as in big_bang
     """
     
-    model, X_list, y_list = big_bang(num_instances=num_instances, p=p, seed0 = seed0, seed1 = seed1)
+    model, X_list, y_list, _ = big_bang(num_instances=num_instances, p=p, seed0 = seed0, seed1 = seed1)
     model.save(name+'_keras_model')
     with open(name+'_X_list.pkl', 'wb') as f:
         pickle.dump(X_list, f)
@@ -116,4 +117,4 @@ def main(name, num_instances=5000, p=0.5, seed0 = 0, seed1 = 1):
 #        pickle.dump(m1, f)
 
 if __name__ == "__main__":
-    main('test_HMM')
+    main('test_HMM_corrected10')

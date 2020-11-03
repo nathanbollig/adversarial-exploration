@@ -71,7 +71,11 @@ class HMMGenerator():
         for aa in motif:
             self.state1_emission[self.aa_list.index(aa)] += 1 / len(motif)
         
-        self.state1_emission = list(self.state1_emission)    
+        self.state1_emission = list(self.state1_emission)   
+        
+        # To ascribe non-zero probabilities to all residues in state 1, now take average with state 0 distribution
+        for i in range(20):
+            self.state1_emission[i] = (10 * self.state1_emission[i] + self.state0_emission[i]) / 11
     
     def set_parameters(self):
         """
@@ -155,11 +159,54 @@ class HMMGenerator():
         self.emissionprob = np.asarray(emissionprob)
         self.n_components = n_components
 
-
+    def list_to_string(self, seq_list):
+        """
+        Converts a list of indices to a string of amino acid characters.
+        """
+        seq = ''
+        
+        for i in seq_list:
+            seq += self.aa_list[i]
+        
+        return seq
     
+    def string_to_list(self, seq_string):
+        """
+        Converts a string of amino acid characters to a list of indices.
+        """
+        seq_list = []
+        
+        for char in seq_string:
+            seq_list.append(self.aa_list.index(char))
+        
+        return seq_list
     
+    def predict_proba(self, seq):
+        """
+        Predict the class 1 probability of the sequence under the model.
+        
+        Input:
+            seq - sequence as string or a list of indices
+        """
+        
+        # Convert to list of indices if input is a string
+        if type(seq) == str:
+            seq = self.string_to_list(seq)
+        
+        # Format feature matrix
+        x = np.asarray(seq, dtype=int).reshape(-1,1)
+        
+        # Compute posterior probability for each state
+        PP = self.model.predict_proba(x)
+        
+        # Return value associated with being in class 1 branch at first sample in active site
+        return PP[self.start, self.start + self.active_site_length]
     
-    
+    def predict(self, seq):
+        """
+        Predict a class label. Predicts 1 iff predict_proba returns a value > 0.5.
+        """
+        return int(self.predict_proba(seq) > 0.5)
     
     
     
