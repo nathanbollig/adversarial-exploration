@@ -8,10 +8,11 @@ import numpy as np
 from hmmlearn import hmm
     
 class HMMGenerator():
-    def __init__(self, seq_length = 60, start = 25, active_site_length = 10):
+    def __init__(self, seq_length = 60, start = 25, active_site_length = 10, p=0.5):
         self.seq_length = seq_length
         self.start = start
         self.active_site_length = active_site_length
+        self.p = p
 
         self.set_aa_emissions()
         self.set_parameters()
@@ -104,6 +105,7 @@ class HMMGenerator():
         start = self.start
         active_site_length = self.active_site_length
         seq_length = self.seq_length
+        p = self.p
         
         start_0_branch = start
         start_1_branch = start + active_site_length
@@ -124,8 +126,8 @@ class HMMGenerator():
             emissionprob.append(background_emission)
         
         # Transition to one of two branches
-        M[start_0_branch-1, start_0_branch] = 0.5
-        M[start_0_branch-1, start_1_branch] = 0.5
+        M[start_0_branch-1, start_0_branch] = 1 - p
+        M[start_0_branch-1, start_1_branch] = p
         emissionprob.append(background_emission)
         
         # Fill in active site sections
@@ -209,7 +211,19 @@ class HMMGenerator():
         return int(self.predict_proba(seq) > 0.5)
     
     
+if __name__ == "__main__":
+    gen = HMMGenerator()
+    count = 0
+    total = 10000
     
+    
+    for i in range(total):
+        seq, y = gen.generate_one_sequence()
+        y_inference = gen.predict(seq)
+        if y != y_inference:
+            count += 1
+    
+    print("Fraction of incorrect inferences: %.2f" % (count/total,))
     
     
     

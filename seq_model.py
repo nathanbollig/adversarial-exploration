@@ -61,7 +61,7 @@ def create_LSTM(X_train, X_val, y_train, y_val):
     
     return model
 
-def big_bang(num_instances=5000, p=0.5, seed0 = 0, seed1 = 1):
+def big_bang(num_instances=5000, p=0.5):
     """
     Generates sequence data and trains a model.
     
@@ -81,7 +81,7 @@ def big_bang(num_instances=5000, p=0.5, seed0 = 0, seed1 = 1):
 #    mcg = MarkovChainGenerator(num_instances=num_instances, p=p, seed0=seed0, seed1=seed1)
 #    X_raw, y, aa_vocab, m0, m1 = mcg.generate()
     
-    gen = HMMGenerator()
+    gen = HMMGenerator(p = p)
     X_raw, y = gen.generate(n_samples=num_instances)
     aa_vocab = gen.aa_list
     
@@ -97,14 +97,14 @@ def big_bang(num_instances=5000, p=0.5, seed0 = 0, seed1 = 1):
     
     return model, [X_train, X_val, X_test], [y_train, y_val, y_test], gen
 
-def main(name, num_instances=5000, p=0.5, seed0 = 0, seed1 = 1):
+def main(name, num_instances=5000, p=0.5):
     """
     Parameters:
         name: a string identifier for the experiment
         others as in big_bang
     """
     
-    model, X_list, y_list, _ = big_bang(num_instances=num_instances, p=p, seed0 = seed0, seed1 = seed1)
+    model, X_list, y_list, _ = big_bang(num_instances=num_instances, p=p)
     model.save(name+'_keras_model')
     with open(name+'_X_list.pkl', 'wb') as f:
         pickle.dump(X_list, f)

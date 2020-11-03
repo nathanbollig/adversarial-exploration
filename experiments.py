@@ -30,12 +30,21 @@ def exp2():
 
 def exp3():
     """
-    Run perturbation pipeline with no perturbation.
+    Quantify error of HMM inference, regardless of model behavior.
     """
     pass
 
 def exp4():
     """
+    Run perturbation pipeline with no perturbation. Illustrates error of HMM inference 
+    on a set of true positives and true negatives.
+    """
+    # Run code in pipeline.py
+    pass
+
+def exp5():
+    """
     Run perturbation pipeline with mutate 1 or k characters perturbation.
     """
+    # Run code in pipeline.py with different perturbation method
     pass
