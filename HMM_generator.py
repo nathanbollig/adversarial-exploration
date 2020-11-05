@@ -8,11 +8,12 @@ import numpy as np
 from hmmlearn import hmm
     
 class HMMGenerator():
-    def __init__(self, seq_length = 60, start = 25, active_site_length = 10, p=0.5):
+    def __init__(self, seq_length = 60, start = 25, active_site_length = 10, p=0.5, class_signal=10):
         self.seq_length = seq_length
         self.start = start
         self.active_site_length = active_site_length
         self.p = p
+        self.class_signal = class_signal
 
         self.set_aa_emissions()
         self.set_parameters()
@@ -75,8 +76,9 @@ class HMMGenerator():
         self.state1_emission = list(self.state1_emission)   
         
         # To ascribe non-zero probabilities to all residues in state 1, now take average with state 0 distribution
+        k = self.class_signal
         for i in range(20):
-            self.state1_emission[i] = (10 * self.state1_emission[i] + self.state0_emission[i]) / 11
+            self.state1_emission[i] = (k * self.state1_emission[i] + self.state0_emission[i]) / (k + 1)
     
     def set_parameters(self):
         """

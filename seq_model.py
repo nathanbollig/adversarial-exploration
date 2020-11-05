@@ -43,7 +43,7 @@ def encode_raw_sequences(X_raw, aa_vocab):
     
     return X
 
-def create_LSTM(X_train, X_val, y_train, y_val):
+def create_LSTM(X_train, X_val, y_train, y_val, n_epochs = 10):
     # define the  model
     model = Sequential()
     model.add(LSTM(128, input_shape=(60,20)))
@@ -53,15 +53,22 @@ def create_LSTM(X_train, X_val, y_train, y_val):
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     
     # Train model
-    model.fit(X_train, y_train, epochs=10, batch_size=64, verbose=1)
+    model.fit(X_train, y_train, epochs=n_epochs, batch_size=64, verbose=1)
     
-    # Evaluate on test set
-    _, accuracy = model.evaluate(X_val, y_val, verbose=0)
-    print('Accuracy: %.2f' % (accuracy*100))
+    # Evaluate on train set
+    result = {}
+    _, train_accuracy = model.evaluate(X_train, y_train, verbose=0)
+    result['model_train_accuracy'] = train_accuracy
+    print('Train Accuracy: %.2f' % (train_accuracy*100))
     
-    return model
+    # Evaluate on validation set
+    _, val_accuracy = model.evaluate(X_val, y_val, verbose=0)
+    result['model_val_accuracy'] = val_accuracy
+    print('Validation Accuracy: %.2f' % (val_accuracy*100))
+    
+    return model, result
 
-def big_bang(num_instances=5000, p=0.5):
+def big_bang(num_instances=5000, p=0.5, class_signal=10, n_epochs=10):
     """
     Generates sequence data and trains a model.
     
@@ -81,7 +88,7 @@ def big_bang(num_instances=5000, p=0.5):
 #    mcg = MarkovChainGenerator(num_instances=num_instances, p=p, seed0=seed0, seed1=seed1)
 #    X_raw, y, aa_vocab, m0, m1 = mcg.generate()
     
-    gen = HMMGenerator(p = p)
+    gen = HMMGenerator(p = p, class_signal = class_signal)
     X_raw, y = gen.generate(n_samples=num_instances)
     aa_vocab = gen.aa_list
     
@@ -93,9 +100,9 @@ def big_bang(num_instances=5000, p=0.5):
     X_val, X_test, y_val, y_test = train_test_split(X_val, y_val, test_size=0.5, random_state=1)
     
     # Define model
-    model = create_LSTM(X_train, X_val, y_train, y_val)
+    model, result = create_LSTM(X_train, X_val, y_train, y_val, n_epochs=n_epochs)
     
-    return model, [X_train, X_val, X_test], [y_train, y_val, y_test], gen
+    return model, result, [X_train, X_val, X_test], [y_train, y_val, y_test], gen
 
 def main(name, num_instances=5000, p=0.5):
     """
@@ -104,7 +111,7 @@ def main(name, num_instances=5000, p=0.5):
         others as in big_bang
     """
     
-    model, X_list, y_list, _ = big_bang(num_instances=num_instances, p=p)
+    model, _, X_list, y_list, _ = big_bang(num_instances=num_instances, p=p)
     model.save(name+'_keras_model')
     with open(name+'_X_list.pkl', 'wb') as f:
         pickle.dump(X_list, f)

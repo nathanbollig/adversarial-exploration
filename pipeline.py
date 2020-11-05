@@ -10,8 +10,8 @@ from sklearn.metrics import accuracy_score
 import numpy as np
 from keras.utils import to_categorical
 
-def perturbation_pipeline(p = 0.5, n_generated = 5000, num_to_perturb = 500, perturb = None):
-    model, X_list, y_list, generator = big_bang(num_instances=n_generated, p=p)
+def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs = 75, num_to_perturb = 500, perturb = None):
+    model, result, X_list, y_list, generator = big_bang(class_signal=class_signal, num_instances=n_generated, p=p, n_epochs = n_epochs)
     _, _, X_test = X_list
     _, _, y_test = y_list  
     
@@ -37,10 +37,24 @@ def perturbation_pipeline(p = 0.5, n_generated = 5000, num_to_perturb = 500, per
             
     model_flip_rate = 1 - accuracy_score(Y_initial, Y_model)
     actual_flip_rate = 1 - accuracy_score(Y_initial, Y_perturb)
+    n_perturbations = len(Y_initial)
+
+    result['model_flip_rate'] = model_flip_rate
+    result['actual_flip_rate'] = actual_flip_rate
+    result['number_perturbations'] = n_perturbations
 
     print("Model flip rate: %.5f" % (model_flip_rate,))
     print("Actual flip rate: %.5f" % (actual_flip_rate,))
-    print("Number perturbations: %i" % (len(Y_initial),))
+    print("Number perturbations: %i" % (n_perturbations,))
+    
+    # Cache experimental context
+    result['p'] = p
+    result['class_signal'] = class_signal
+    result['n_generated'] = n_generated
+    result['num_to_perturb'] = num_to_perturb
+    result['perturb_method'] = perturb.__name__
+    
+    return result
 
 if __name__ == "__main__":
     from perturbations import no_perturb
