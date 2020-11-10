@@ -35,7 +35,7 @@ def exp1(dir_name):
     
     for k in [0, 1, 2, 3, 4, 5, 10, 15, 20, 50, 100]:
         for n_epochs in [25, 75]:
-            _, result, _, _, _ = big_bang(num_instances=2000, p=0.5, class_signal=k, n_epochs=n_epochs)
+            _, result, _, _, _, _ = big_bang(num_instances=2000, p=0.5, class_signal=k, n_epochs=n_epochs)
             train_acc = result['model_train_accuracy']
             val_acc = result['model_val_accuracy']
             row = [k, n_epochs, train_acc, val_acc]
@@ -55,7 +55,7 @@ def exp2(dir_name):
     output = []
     
     for p in [0.05, 0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9, 0.95]:
-        _, result, _, _, _ = big_bang(num_instances=2000, p=p, class_signal=10, n_epochs=75)
+        _, result, _, _, _, _ = big_bang(num_instances=2000, p=p, class_signal=10, n_epochs=75)
         train_acc = result['model_train_accuracy']
         val_acc = result['model_val_accuracy']
         row = [p, train_acc, val_acc]
@@ -97,20 +97,39 @@ def exp4(dir_name):
     """
     from perturbations import no_perturb
     
-    result = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = no_perturb, n_epochs = 75)
-    output = pd.DataFrame(result, index = [0])
+    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = no_perturb, n_epochs = 75)
     save_output(output, dir_name, "exp4")
     return output
 
-def exp5():
+def exp5(dir_name):
+    """
+    Run perturbation pipeline with mutate 1 or k characters perturbation.
+    
+    Former way of organizing the pipeline code.
+    """
+    from perturbations import random_pt_mutations
+    from functools import partial
+    perturb = partial(random_pt_mutations, k=10)
+    perturb.__name__ = 'random_pt_mutations'
+    
+    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = perturb, n_epochs = 25)
+    save_output(output, dir_name, "exp5")
+    return output
+
+def exp6(dir_name):
     """
     Run perturbation pipeline with mutate 1 or k characters perturbation.
     """
-    # Run code in pipeline.py with different perturbation method
-    pass
-
+    from perturbations import random_pt_mutations
+    
+    perturb_args = {}
+    perturb_args['k'] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,20,25,30,35,40,50,60]
+    
+    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = random_pt_mutations, n_epochs = 25, perturb_args = perturb_args)
+    save_output(output, dir_name, "exp6")
+    return output
 
 if __name__ == "__main__":
     dir_name = Path('data/')
     
-    exp4(dir_name)
+    exp6(dir_name)

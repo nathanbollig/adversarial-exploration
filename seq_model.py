@@ -102,7 +102,7 @@ def big_bang(num_instances=5000, p=0.5, class_signal=10, n_epochs=10):
     # Define model
     model, result = create_LSTM(X_train, X_val, y_train, y_val, n_epochs=n_epochs)
     
-    return model, result, [X_train, X_val, X_test], [y_train, y_val, y_test], gen
+    return model, result, [X_train, X_val, X_test], [y_train, y_val, y_test], gen, aa_vocab
 
 def main(name, num_instances=5000, p=0.5):
     """
@@ -111,7 +111,7 @@ def main(name, num_instances=5000, p=0.5):
         others as in big_bang
     """
     
-    model, _, X_list, y_list, _ = big_bang(num_instances=num_instances, p=p)
+    model, _, X_list, y_list, _, _ = big_bang(num_instances=num_instances, p=p)
     model.save(name+'_keras_model')
     with open(name+'_X_list.pkl', 'wb') as f:
         pickle.dump(X_list, f)
