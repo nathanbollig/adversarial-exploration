@@ -129,7 +129,17 @@ def exp6(dir_name):
     save_output(output, dir_name, "exp6")
     return output
 
+def exp7(dir_name):
+    """
+    Run single HotFlip.
+    """
+    from perturbations import hot_flip
+    
+    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 100, perturb = hot_flip, n_epochs = 25)
+    save_output(output, dir_name, "exp7")
+    return output
+
 if __name__ == "__main__":
     dir_name = Path('data/')
     
-    exp6(dir_name)
+    exp7(dir_name)

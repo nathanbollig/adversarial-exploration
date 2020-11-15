@@ -5,7 +5,10 @@ interface.
 
     input:
         seq - a list of indices
+        y - original label for the sequence
         aa_vocab - a list of amino acid characters in the indexed ordering
+        model - a model
+        pertub_args - a dictionary
     output:
         a list of indices.
 
@@ -16,13 +19,14 @@ Created on Tue Nov  3 09:49:33 2020
 @author: NBOLLIG
 """
 import random
+from utils import decode_from_one_hot, encode_as_one_hot
+from hotflip import one_flip
 
 
-
-def no_perturb(seq, aa_vocab):
+def no_perturb(seq, y, aa_vocab = None, model = None):
     return seq
 
-def random_pt_mutations(seq, aa_vocab, k):
+def random_pt_mutations(seq, y, aa_vocab, model, k):
     """
     Mutate k randomly-selected amino acids, to a random distinct character.
     """
@@ -34,3 +38,11 @@ def random_pt_mutations(seq, aa_vocab, k):
         seq[i] = j
     
     return seq
+
+def hot_flip(seq, y, aa_vocab, model, k=1):
+    """
+    Perform HotFlip algorithm up to k flips.
+    """
+    seq = encode_as_one_hot(seq)
+    seq, L = one_flip(model, seq, y)
+    return decode_from_one_hot(seq)

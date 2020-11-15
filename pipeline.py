@@ -69,12 +69,13 @@ def perturb_one_set(model, generator, X, y_init, aa_vocab, perturb, perturb_args
     Y_model = [] # model predicted labels of perturbed inputs
     
     for i in range(len(X)):
+        print("Perturbing %i..." % (i,))
         x = X[i]
         y = y_init[i]
         if perturb_args == None:
-            x_perturb = perturb(x, aa_vocab)
+            x_perturb = perturb(x, y_init, aa_vocab, model)
         else:
-            x_perturb = perturb(x, aa_vocab, **perturb_args)
+            x_perturb = perturb(x, y_init, aa_vocab, model, **perturb_args)
         Y_perturb.append(generator.predict(x_perturb))
         Y_model.append(model.predict(to_categorical(x_perturb, num_classes=20).reshape((1,60,20))).item() > 0.5)
         Y_initial.append(y)
