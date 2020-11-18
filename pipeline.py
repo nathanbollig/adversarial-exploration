@@ -74,24 +74,30 @@ def perturb_one_set(model, generator, X, y_init, aa_vocab, perturb, perturb_args
         x = X[i]
         y = y_init[i]
         if perturb_args == None:
-            x_perturb, data = perturb(x, y_init, aa_vocab, model)
+            x_perturb, data = perturb(x, y, aa_vocab, model)
         else:
-            x_perturb, data = perturb(x, y_init, aa_vocab, model, **perturb_args)
+            x_perturb, data = perturb(x, y, aa_vocab, model, **perturb_args)
+        if type(data) == list:
+            for d in data:
+                d['instance'] = i + 1
         Y_perturb.append(generator.predict(x_perturb))
         Y_model.append(model.predict(to_categorical(x_perturb, num_classes=20).reshape((1,60,20))).item() > 0.5)
         Y_initial.append(y)
-        instance_data.append(data)
+        instance_data.extend(data)
             
+    instance_data = pd.DataFrame(instance_data)
+    
     model_flip_rate = 1 - accuracy_score(Y_initial, Y_model)
     actual_flip_rate = 1 - accuracy_score(Y_initial, Y_perturb)
     
     if perturb_args == None:
         result = {}
     else:
-        result = perturb_args
+        result = perturb_args.copy()
 
     result['model_flip_rate'] = model_flip_rate
     result['actual_flip_rate'] = actual_flip_rate
+    result['avg mutations'] = instance_data.shape[0] / len(X)
 
     print("Model flip rate: %.5f" % (model_flip_rate,))
     print("Actual flip rate: %.5f" % (actual_flip_rate,))
@@ -169,20 +175,18 @@ def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs
     
         rows = pd.concat(rows, sort=False)
     
+    # Organize output
+    output = output.append(rows, sort=False).fillna('')  
+    
     # Organize instance data
     instance_output = []
     for perturb_set_idx in range(len(instance_data_list)):
         instance_data = instance_data_list[perturb_set_idx]
-        for i in range(len(instance_data)):
-            row = instance_data[i]
-            row['perturb_set_idx'] = perturb_set_idx + 1
-            row['instance_idx'] = i + 1
-            instance_output.append(pd.DataFrame(row, index = [i]))
-    instance_output = pd.concat(instance_output, sort=False, ignore_index=True)
-        
-    # Organize output
-    output = output.append(rows, sort=False).fillna('')
+        instance_data['perturb_set_idx'] = perturb_set_idx + 1
+        instance_output.append(instance_data)
     
+    instance_output = pd.concat(instance_output, sort=False, ignore_index=True)
+
     return output, instance_output
 
 if __name__ == "__main__":

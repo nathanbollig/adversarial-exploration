@@ -11,7 +11,7 @@ interface.
         pertub_args - a dictionary
     output:
         a list of indices
-        data - dictionary with additional data
+        data - list of dictionaries with additional data, one per character flip
 
 Generally we should have:
 aa_vocab = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
@@ -40,10 +40,45 @@ def random_pt_mutations(seq, y, aa_vocab, model, k):
     
     return seq, {}
 
-def hot_flip(seq, y, aa_vocab, model, k=1):
+def hot_flip(seq, y, aa_vocab, model):
     """
-    Perform HotFlip algorithm up to k flips.
+    Perform HotFlip algorithm - flip the character.
     """
     seq = encode_as_one_hot(seq)
     seq, data = one_flip(model, seq, y)
+    return decode_from_one_hot(seq), [data]
+
+def greedy_flip(seq, y, aa_vocab, model, confidence_threshold = 0.5):
+    """
+    Greedily iterate hot flip until the predicted class label flips and the
+    resulting prediction has confidence >= confidence_threshold.
+    """
+    seq = encode_as_one_hot(seq)
+    pred = y
+    conf = 0
+    data = []
+    init_pred_proba = model.predict(seq.reshape(1,60,20)).item()
+    
+    while int(y) == pred or conf < confidence_threshold:
+        seq, one_flip_data = one_flip(model, seq, y)
+        pred_proba = model.predict(seq.reshape(1,60,20)).item()
+        pred = int(pred_proba > 0.5)
+        
+        if int(y) == 0:
+            conf = pred_proba
+        else:
+            conf = 1 - pred_proba
+
+        one_flip_data['pred_proba'] = pred_proba
+        one_flip_data['conf'] = conf
+        one_flip_data['init_pred_proba'] = init_pred_proba
+        data.append(one_flip_data)
+    
+    print("Flipped %i characters!" % (len(data), ))
+    
     return decode_from_one_hot(seq), data
+    
+    
+    
+    
+    

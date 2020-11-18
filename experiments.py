@@ -154,6 +154,7 @@ def exp7(dir_name):
     plt.title('Mutation probability')
     plt.grid(True)
     save_image(plt, dir_name, "fig7a")
+    plt.clf()
     
     # Figure 7b
     L = instance_output['max_loss_increase'].to_numpy()
@@ -164,11 +165,22 @@ def exp7(dir_name):
     plt.title('Loss increase for point substitutions')
     plt.grid(True)
     save_image(plt, dir_name, "fig7b")
+    plt.clf()
+
+def exp8(dir_name):
+    """
+    Greedy character flip until stopping condition is met.
+    """
+    from perturbations import greedy_flip
     
+    perturb_args = {}
+    perturb_args['confidence_threshold'] = [0.5, 0.8, 0.9, 0.95, 0.99]
     
-    return output
+    output, instance_output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 2, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 25)
+    save_output(output, dir_name, "exp8")
+    save_output(instance_output, dir_name, "exp8instance")
 
 if __name__ == "__main__":
     dir_name = Path('data/')
     
-    exp7(dir_name)
+    exp8(dir_name)
