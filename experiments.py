@@ -12,11 +12,18 @@ from pathlib import Path
 import pandas as pd
 import os
 import datetime
+import matplotlib.pyplot as plt
 
 def save_output(output, dir_name, exp_name):
     timestamp = str(int(datetime.datetime.now().timestamp()))
-    path = os.path.join(dir_name, exp_name + timestamp +".csv")
+    path = os.path.join(dir_name, exp_name + "_" + timestamp +".csv")
     output.to_csv(path)
+
+def save_image(plt, dir_name, name):
+    timestamp = str(int(datetime.datetime.now().timestamp()))
+    path = os.path.join(dir_name, name + "_" + timestamp +".jpg")
+    plt.savefig(path, dpi = 400)
+    return
 
 def exp1(dir_name):
     """
@@ -135,8 +142,30 @@ def exp7(dir_name):
     """
     from perturbations import hot_flip
     
-    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 100, perturb = hot_flip, n_epochs = 25)
+    output, instance_output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = hot_flip, n_epochs = 25)
     save_output(output, dir_name, "exp7")
+    save_output(instance_output, dir_name, "exp7instance")
+    
+    # Figure 7a    
+    x = instance_output['pos_to_change'].to_numpy()
+    plt.hist(x, 50, density=True, facecolor='g', alpha=0.75)
+    plt.xlabel('Position')
+    plt.ylabel('Probability')
+    plt.title('Mutation probability')
+    plt.grid(True)
+    save_image(plt, dir_name, "fig7a")
+    
+    # Figure 7b
+    L = instance_output['max_loss_increase'].to_numpy()
+    plt.scatter(x, L, facecolors='none', edgecolors='g')
+    plt.xlabel('Position')
+    plt.ylabel('Log change in loss')
+    plt.yscale('log')
+    plt.title('Loss increase for point substitutions')
+    plt.grid(True)
+    save_image(plt, dir_name, "fig7b")
+    
+    
     return output
 
 if __name__ == "__main__":

@@ -10,7 +10,8 @@ interface.
         model - a model
         pertub_args - a dictionary
     output:
-        a list of indices.
+        a list of indices
+        data - dictionary with additional data
 
 Generally we should have:
 aa_vocab = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
@@ -24,7 +25,7 @@ from hotflip import one_flip
 
 
 def no_perturb(seq, y, aa_vocab = None, model = None):
-    return seq
+    return seq, {}
 
 def random_pt_mutations(seq, y, aa_vocab, model, k):
     """
@@ -37,12 +38,12 @@ def random_pt_mutations(seq, y, aa_vocab, model, k):
         j = random.choice(candidates)
         seq[i] = j
     
-    return seq
+    return seq, {}
 
 def hot_flip(seq, y, aa_vocab, model, k=1):
     """
     Perform HotFlip algorithm up to k flips.
     """
     seq = encode_as_one_hot(seq)
-    seq, L = one_flip(model, seq, y)
-    return decode_from_one_hot(seq)
+    seq, data = one_flip(model, seq, y)
+    return decode_from_one_hot(seq), data

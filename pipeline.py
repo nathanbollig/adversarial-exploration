@@ -67,18 +67,20 @@ def perturb_one_set(model, generator, X, y_init, aa_vocab, perturb, perturb_args
     Y_initial = [] # initial labels
     Y_perturb = [] # actual labels of perturbed inputs
     Y_model = [] # model predicted labels of perturbed inputs
+    instance_data = []
     
     for i in range(len(X)):
         print("Perturbing %i..." % (i,))
         x = X[i]
         y = y_init[i]
         if perturb_args == None:
-            x_perturb = perturb(x, y_init, aa_vocab, model)
+            x_perturb, data = perturb(x, y_init, aa_vocab, model)
         else:
-            x_perturb = perturb(x, y_init, aa_vocab, model, **perturb_args)
+            x_perturb, data = perturb(x, y_init, aa_vocab, model, **perturb_args)
         Y_perturb.append(generator.predict(x_perturb))
         Y_model.append(model.predict(to_categorical(x_perturb, num_classes=20).reshape((1,60,20))).item() > 0.5)
         Y_initial.append(y)
+        instance_data.append(data)
             
     model_flip_rate = 1 - accuracy_score(Y_initial, Y_model)
     actual_flip_rate = 1 - accuracy_score(Y_initial, Y_perturb)
@@ -94,7 +96,7 @@ def perturb_one_set(model, generator, X, y_init, aa_vocab, perturb, perturb_args
     print("Model flip rate: %.5f" % (model_flip_rate,))
     print("Actual flip rate: %.5f" % (actual_flip_rate,))
     
-    return result
+    return result, instance_data
 
 def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs = 75, num_to_perturb = 500, perturb = None, perturb_args = None):
     """
@@ -142,11 +144,13 @@ def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs
     
     # Add model data to output
     output = pd.DataFrame(result, index = [0])
+    instance_data_list = []
     
     if perturb_args == None:
         # Run perturb once
-        rows = perturb_one_set(model, generator, X_filtered, y_filtered, aa_vocab, perturb)
+        rows, instance_data = perturb_one_set(model, generator, X_filtered, y_filtered, aa_vocab, perturb)
         rows = pd.DataFrame(rows, index = [1])
+        instance_data_list = [instance_data]
     
     else:
         # Run the perturbation for the range of provided parameters in perturb_args
@@ -158,16 +162,28 @@ def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs
             for key,val in perturb_args.items():
                 args[key] = val[i]
             
-            result = perturb_one_set(model, generator, X_filtered, y_filtered, aa_vocab, perturb, perturb_args = args)
+            result, instance_data = perturb_one_set(model, generator, X_filtered, y_filtered, aa_vocab, perturb, perturb_args = args)
             
             rows.append(pd.DataFrame(result, index = [i+1]))
+            instance_data_list.append(instance_data)
     
         rows = pd.concat(rows, sort=False)
     
-    # Save results
+    # Organize instance data
+    instance_output = []
+    for perturb_set_idx in range(len(instance_data_list)):
+        instance_data = instance_data_list[perturb_set_idx]
+        for i in range(len(instance_data)):
+            row = instance_data[i]
+            row['perturb_set_idx'] = perturb_set_idx + 1
+            row['instance_idx'] = i + 1
+            instance_output.append(pd.DataFrame(row, index = [i]))
+    instance_output = pd.concat(instance_output, sort=False, ignore_index=True)
+        
+    # Organize output
     output = output.append(rows, sort=False).fillna('')
     
-    return output
+    return output, instance_output
 
 if __name__ == "__main__":
     from perturbations import no_perturb

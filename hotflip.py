@@ -65,7 +65,13 @@ def one_flip(model, x, y):
                 current_char_idx = a
                 new_char_idx = b
     
+    data = {}
+    data['max_loss_increase'] = max_loss_increase
+    data['pos_to_change'] = pos_to_change 
+    data['current_char_idx'] = current_char_idx 
+    data['new_char_idx'] = new_char_idx 
+    
     x_perturb = np.copy(x).reshape((60,20))
     x_perturb[pos_to_change][current_char_idx] = 0
     x_perturb[pos_to_change][new_char_idx] = 1
-    return x_perturb, max_loss_increase
+    return x_perturb, data
