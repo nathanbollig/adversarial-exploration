@@ -58,6 +58,7 @@ def greedy_flip(seq, y, aa_vocab, model, confidence_threshold = 0.5):
     conf = 0
     data = []
     init_pred_proba = model.predict(seq.reshape(1,60,20)).item()
+    i = 1
     
     while int(y) == pred or conf < confidence_threshold:
         seq, one_flip_data = one_flip(model, seq, y)
@@ -72,9 +73,9 @@ def greedy_flip(seq, y, aa_vocab, model, confidence_threshold = 0.5):
         one_flip_data['pred_proba'] = pred_proba
         one_flip_data['conf'] = conf
         one_flip_data['init_pred_proba'] = init_pred_proba
+        one_flip_data['change_number'] = i
         data.append(one_flip_data)
-    
-    print("Flipped %i characters!" % (len(data), ))
+        i += 1
     
     return decode_from_one_hot(seq), data
     

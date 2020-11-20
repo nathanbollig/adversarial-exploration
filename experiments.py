@@ -10,20 +10,9 @@ from pipeline import perturbation_pipeline
 
 from pathlib import Path
 import pandas as pd
-import os
-import datetime
 import matplotlib.pyplot as plt
 
-def save_output(output, dir_name, exp_name):
-    timestamp = str(int(datetime.datetime.now().timestamp()))
-    path = os.path.join(dir_name, exp_name + "_" + timestamp +".csv")
-    output.to_csv(path)
-
-def save_image(plt, dir_name, name):
-    timestamp = str(int(datetime.datetime.now().timestamp()))
-    path = os.path.join(dir_name, name + "_" + timestamp +".jpg")
-    plt.savefig(path, dpi = 400)
-    return
+from history import save_output, save_image
 
 def exp1(dir_name):
     """
@@ -104,7 +93,7 @@ def exp4(dir_name):
     """
     from perturbations import no_perturb
     
-    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = no_perturb, n_epochs = 75)
+    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = no_perturb, n_epochs = 75, legacy_output = True)
     save_output(output, dir_name, "exp4")
     return output
 
@@ -119,7 +108,7 @@ def exp5(dir_name):
     perturb = partial(random_pt_mutations, k=10)
     perturb.__name__ = 'random_pt_mutations'
     
-    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = perturb, n_epochs = 25)
+    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = perturb, n_epochs = 25, legacy_output = True)
     save_output(output, dir_name, "exp5")
     return output
 
@@ -132,7 +121,7 @@ def exp6(dir_name):
     perturb_args = {}
     perturb_args['k'] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,20,25,30,35,40,50,60]
     
-    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = random_pt_mutations, n_epochs = 25, perturb_args = perturb_args)
+    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = random_pt_mutations, n_epochs = 25, perturb_args = perturb_args, legacy_output = True)
     save_output(output, dir_name, "exp6")
     return output
 
@@ -142,7 +131,7 @@ def exp7(dir_name):
     """
     from perturbations import hot_flip
     
-    output, instance_output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = hot_flip, n_epochs = 25)
+    output, instance_output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = hot_flip, n_epochs = 25, legacy_output = True)
     save_output(output, dir_name, "exp7")
     save_output(instance_output, dir_name, "exp7instance")
     
@@ -169,18 +158,46 @@ def exp7(dir_name):
 
 def exp8(dir_name):
     """
-    Greedy character flip until stopping condition is met.
+    Greedy character flip until stopping condition is met, legacy output.
     """
     from perturbations import greedy_flip
     
     perturb_args = {}
-    perturb_args['confidence_threshold'] = [0.5, 0.8, 0.9, 0.95, 0.99]
+    perturb_args['confidence_threshold'] = [0.5, 0.8]
     
-    output, instance_output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 2, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 25)
+    output, instance_output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 5, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 5, legacy_output = True)
     save_output(output, dir_name, "exp8")
     save_output(instance_output, dir_name, "exp8instance")
 
-if __name__ == "__main__":
-    dir_name = Path('data/')
+def exp9(dir_name):
+    """
+    Test history output and saving.
+    """
+    from perturbations import greedy_flip
     
-    exp8(dir_name)
+    perturb_args = {}
+    perturb_args['confidence_threshold'] = [0.5, 0.8]
+    
+    h = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 5, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 5)
+    h.set_dir(dir_name)
+    h.save_tables()
+    h.save()
+
+def exp10():
+    """
+    Main experiment for greedy character flip
+    """
+    from perturbations import greedy_flip
+    
+    perturb_args = {}
+    perturb_args['confidence_threshold'] = [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.97, 0.9, 0.99]
+    
+    dir_name = Path('data/')
+    h = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 100, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 25, dir_name=dir_name)
+    h.save_tables()
+    h.save()
+
+if __name__ == "__main__":
+    #dir_name = Path('data/')
+    
+    exp10()
