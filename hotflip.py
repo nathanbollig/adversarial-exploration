@@ -5,35 +5,18 @@ Created on Sat Nov 14 20:10:53 2020
 @author: NBOLLIG
 """
 import numpy as np
-from keras import backend as K
-from keras.layers import Input
 from utils import decode_from_one_hot
 
-def compute_gradient(model, x, y):
-    """
-    Compute the gradient of the loss function of the model at x,y with respect to inputs.
-    
-    Parameters:
-        model - keras model from big_bang
-        x - single one-hot-encoded sequence
-        y - binary label
-    """
-    
-    # Set up function to compute gradient
-    y_true = Input(shape=(1,))
-    ce = K.binary_crossentropy(y_true, model.output)
-    grad_ce = K.gradients(ce, model.inputs)
-    func = K.function(model.inputs + [y_true], grad_ce)
-    
+def evaluate_grad_funct(f, x, y):
     # Gradient of loss at (x,y) with respect to inputs
-    return func([np.asarray(x).reshape((1,60,20)), y])[0][0]
+    return f([np.asarray(x).reshape((1,60,20)), y])[0][0]
 
-def one_flip(model, x, y):
+def one_flip(gradient_func, x, y):
     """
     Compute a single character flip using the HotFlip algorithm.
     
     Parameters:
-        model - keras model from big_bang
+        gradient_func - keras function for gradient computation on model
         x - single one-hot-encoded sequence
         y - binary label
     
@@ -45,7 +28,7 @@ def one_flip(model, x, y):
     a_vector = decode_from_one_hot(x)
     
     # get gradient
-    output = compute_gradient(model, x, y)
+    output = evaluate_grad_funct(gradient_func, x, y)
     
     # Find character flip that causes maximum increase in loss
     max_loss_increase = 0

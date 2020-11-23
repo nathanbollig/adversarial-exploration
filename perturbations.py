@@ -22,7 +22,8 @@ Created on Tue Nov  3 09:49:33 2020
 import random
 from utils import decode_from_one_hot, encode_as_one_hot
 from hotflip import one_flip
-
+from keras import backend as K
+from keras.layers import Input
 
 def no_perturb(seq, y, aa_vocab = None, model = None):
     return seq, {}
@@ -48,6 +49,23 @@ def hot_flip(seq, y, aa_vocab, model):
     seq, data = one_flip(model, seq, y)
     return decode_from_one_hot(seq), [data]
 
+def derive_gradient_funct(model):
+    """
+    Return a gradient function that will be used to compute the gradient of the 
+    loss function of the model at x,y with respect to inputs.
+    
+    Parameters:
+        model - keras model from big_bang
+        x - single one-hot-encoded sequence
+        y - binary label
+    """
+    
+    # Set up function to compute gradient
+    y_true = Input(shape=(1,))
+    ce = K.binary_crossentropy(y_true, model.output)
+    grad_ce = K.gradients(ce, model.inputs)
+    return K.function(model.inputs + [y_true], grad_ce)
+
 def greedy_flip(seq, y, aa_vocab, model, confidence_threshold = 0.5):
     """
     Greedily iterate hot flip until the predicted class label flips and the
@@ -59,9 +77,11 @@ def greedy_flip(seq, y, aa_vocab, model, confidence_threshold = 0.5):
     data = []
     init_pred_proba = model.predict(seq.reshape(1,60,20)).item()
     i = 1
+    grad_function = derive_gradient_funct(model) # Only get the gradient from the keras model once to avoid mem leak
     
-    while int(y) == pred or conf < confidence_threshold:
-        seq, one_flip_data = one_flip(model, seq, y)
+    while i < len(seq) and (int(y) == pred or conf < confidence_threshold):
+        print('.', end='') # one dot per character flip
+        seq, one_flip_data = one_flip(grad_function, seq, y)
         pred_proba = model.predict(seq.reshape(1,60,20)).item()
         pred = int(pred_proba > 0.5)
         
@@ -77,6 +97,7 @@ def greedy_flip(seq, y, aa_vocab, model, confidence_threshold = 0.5):
         data.append(one_flip_data)
         i += 1
     
+    print('')
     return decode_from_one_hot(seq), data
     
     

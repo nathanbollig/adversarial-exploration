@@ -13,6 +13,7 @@ import pandas as pd
 from keras.utils import to_categorical
 from pathlib import Path
 import os
+import gc
 
 #def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs = 75, num_to_perturb = 500, perturb = None):
 #    model, result, X_list, y_list, generator, aa_vocab = big_bang(class_signal=class_signal, num_instances=n_generated, p=p, n_epochs = n_epochs)
@@ -77,7 +78,7 @@ def perturb_one_set(model, generator, X, y_init, aa_vocab, perturb, perturb_args
     instance_data = []
     
     for i in range(len(X)):
-        print("Perturbing item %i..." % (i,))
+        print("Perturbing item %i" % (i,), end='')
         
         x = X[i]
         y = y_init[i]
@@ -92,7 +93,7 @@ def perturb_one_set(model, generator, X, y_init, aa_vocab, perturb, perturb_args
         Y_model.append(model.predict(to_categorical(x_perturb, num_classes=20).reshape((1,60,20))).item() > 0.5)
         Y_initial.append(y)
         instance_data.extend(data) # maintain list of dictionaries
-    
+                
     # Compute block of instance_summary
     instance_data = pd.DataFrame(instance_data) # convert list of dictionaries to df
     
@@ -222,10 +223,11 @@ def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs
             
             # Save current history
             h.save()
+            gc.collect()
         
         # Create set summary
         # Combine all single-row dfs into one df
-        h.set_summary = pd.concat(h.set_summary_rows, sort=False)
+        h.set_summary = pd.concat(h.set_summary_rows)
         del h.set_summary_rows
     
     # Create instance summary
@@ -233,7 +235,7 @@ def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs
     for perturb_set_idx in range(len(h.instance_data_list)):
         h.instance_data_list[perturb_set_idx]['perturb_set_idx'] = perturb_set_idx + 1
     
-    h.instance_summary = pd.concat(h.instance_data_list, sort=False, ignore_index=True)
+    h.instance_summary = pd.concat(h.instance_data_list, ignore_index=True)
     del h.instance_data_list
 
     # Output results
@@ -241,6 +243,7 @@ def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs
         output = output.append(h.set_summary, sort=False).fillna('')  # add to results in 0th row
         return output, h.instance_summary
     
+    gc.collect()
     return h
 
 if __name__ == "__main__":
