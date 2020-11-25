@@ -190,10 +190,10 @@ def exp10():
     from perturbations import greedy_flip
     
     perturb_args = {}
-    perturb_args['confidence_threshold'] = [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.97, 0.9, 0.99]
+    perturb_args['confidence_threshold'] = [0.999]
     
     dir_name = Path('data/')
-    h = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 100, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 25, dir_name=dir_name)
+    h = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 200, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 25, dir_name=dir_name)
     h.save_tables()
     h.save()
 

@@ -7,6 +7,10 @@ Created on Fri Nov 20 08:40:05 2020
 import os
 import datetime
 import pickle
+import pathlib
+from pathlib import Path
+
+
 
 
 class History():
@@ -31,6 +35,18 @@ class History():
 # =============================================================================
 # Utilities
 # =============================================================================
+def create_history_from_file(file):
+    try:
+        h = pickle.load( open(file, "rb" ) )
+        h.dir_name = os.path.dirname(file)
+    except NotImplementedError:
+        temp = pathlib.PosixPath
+        pathlib.PosixPath = pathlib.WindowsPath
+        h = pickle.load( open(file, "rb" ) )
+        h.dir_name = os.path.dirname(file)
+        pathlib.PosixPath = temp
+    return h    
+
 def save_output(output, dir_name, exp_name):
     timestamp = str(int(datetime.datetime.now().timestamp()))
     path = os.path.join(dir_name, exp_name + "_" + timestamp +".csv")
@@ -41,3 +57,10 @@ def save_image(plt, dir_name, name):
     path = os.path.join(dir_name, name + "_" + timestamp +".jpg")
     plt.savefig(path, dpi = 400)
     return
+
+
+if __name__ == "__main__":
+    FILE_NAME = '_1606316466.p'
+    dir_name = Path('data/')
+    file = os.path.join(dir_name, FILE_NAME)
+    h = create_history_from_file(file)

@@ -157,27 +157,27 @@ def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs
     _, _, X_test = X_list
     _, _, y_test = y_list
     
-    X_sample, y_sample = zip(*random.sample(list(zip(X_test, y_test)), num_to_perturb))
-    
     # Convert list of one-hot encodings to list of sequences
     X = []
-    for i in range(len(X_sample)):
-        X.append(np.argmax(X_sample[i], axis=1, out=None).reshape(1, -1).tolist()[0])
+    for i in range(len(X_test)):
+        X.append(np.argmax(X_test[i], axis=1, out=None).reshape(1, -1).tolist()[0])
     
-    # Filter to use only true positives and true negatives
+    # Filter to use only true negatives
     X_filtered = []
     y_filtered = []
     for i in range(len(X)):
         x = X[i]
-        y = y_sample[i]
-        if (model.predict(to_categorical(x, num_classes=20).reshape(1,60,20)).item() > 0.5) == y:
+        y = y_test[i]
+        if y==0 and (model.predict(to_categorical(x, num_classes=20).reshape(1,60,20)).item() > 0.5) == y:
             X_filtered.append(x)
             y_filtered.append(y)
     
-    n_perturbations = len(y_filtered)
+    h.result['num_true_negs'] = len(y_filtered)
+    
+    # Restrict to num_to_perturb
+    X_filtered, y_filtered = zip(*random.sample(list(zip(X_filtered, y_filtered)), num_to_perturb))
     
     # Cache experimental context
-    h.result['number_perturbations'] = n_perturbations
     h.result['p'] = p
     h.result['class_signal'] = class_signal
     h.result['n_generated'] = n_generated
