@@ -83,9 +83,9 @@ def perturb_one_set(model, generator, X, y_init, aa_vocab, perturb, perturb_args
         x = X[i]
         y = y_init[i]
         if perturb_args == None:
-            x_perturb, data = perturb(x, y, aa_vocab, model) # data is a list of dictionaries
+            x_perturb, data = perturb(x, y, aa_vocab, model, generator) # data is a list of dictionaries
         else:
-            x_perturb, data = perturb(x, y, aa_vocab, model, **perturb_args)
+            x_perturb, data = perturb(x, y, aa_vocab, model, generator, **perturb_args)
         if type(data) == list:
             for d in data:
                 d['instance'] = i + 1
@@ -168,7 +168,7 @@ def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs
     for i in range(len(X)):
         x = X[i]
         y = y_test[i]
-        if y==0 and (model.predict(to_categorical(x, num_classes=20).reshape(1,60,20)).item() > 0.5) == y:
+        if y==0 and model.predict(to_categorical(x, num_classes=20).reshape(1,60,20)).item() < 0.5:
             X_filtered.append(x)
             y_filtered.append(y)
     

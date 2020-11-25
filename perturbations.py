@@ -66,7 +66,7 @@ def derive_gradient_funct(model):
     grad_ce = K.gradients(ce, model.inputs)
     return K.function(model.inputs + [y_true], grad_ce)
 
-def greedy_flip(seq, y, aa_vocab, model, confidence_threshold = 0.5):
+def greedy_flip(seq, y, aa_vocab, model, generator, confidence_threshold = 0.5):
     """
     Greedily iterate hot flip until the predicted class label flips and the
     resulting prediction has confidence >= confidence_threshold.
@@ -94,6 +94,7 @@ def greedy_flip(seq, y, aa_vocab, model, confidence_threshold = 0.5):
         one_flip_data['conf'] = conf
         one_flip_data['init_pred_proba'] = init_pred_proba
         one_flip_data['change_number'] = i
+        one_flip_data['actual_label'] = generator.predict(decode_from_one_hot(seq))
         data.append(one_flip_data)
         i += 1
     

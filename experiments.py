@@ -176,7 +176,7 @@ def exp9(dir_name):
     from perturbations import greedy_flip
     
     perturb_args = {}
-    perturb_args['confidence_threshold'] = [0.95]
+    perturb_args['confidence_threshold'] = [0.9]
     
     h = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 10, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 5)
     h.set_dir(dir_name)
@@ -193,7 +193,7 @@ def exp10():
     perturb_args['confidence_threshold'] = [0.999]
     
     dir_name = Path('data/')
-    h = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 200, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 25, dir_name=dir_name)
+    h = perturbation_pipeline(p=0.5, n_generated = 10000, num_to_perturb = 400, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 25, dir_name=dir_name)
     h.save_tables()
     h.save()
 
