@@ -93,9 +93,9 @@ def exp4(dir_name):
     """
     from perturbations import no_perturb
     
-    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = no_perturb, n_epochs = 75, legacy_output = True)
-    save_output(output, dir_name, "exp4")
-    return output
+    h = perturbation_pipeline(p=0.5, n_generated = 10000, num_to_perturb = 400, perturb = no_perturb, n_epochs = 25, dir_name=dir_name)
+    h.save_tables()
+    h.save()
 
 def exp5(dir_name):
     """
@@ -121,9 +121,11 @@ def exp6(dir_name):
     perturb_args = {}
     perturb_args['k'] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,20,25,30,35,40,50,60]
     
-    output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = random_pt_mutations, n_epochs = 25, perturb_args = perturb_args, legacy_output = True)
-    save_output(output, dir_name, "exp6")
-    return output
+    h = perturbation_pipeline(p=0.5, n_generated = 10000, num_to_perturb = 400, perturb = random_pt_mutations, n_epochs = 25, perturb_args = perturb_args, dir_name=dir_name)
+    h.save_tables()
+    h.save()
+    
+    
 
 def exp7(dir_name):
     """
@@ -197,7 +199,34 @@ def exp10():
     h.save_tables()
     h.save()
 
-if __name__ == "__main__":
-    #dir_name = Path('data/')
+def exp11(dir_name):
+    """
+    Quantify error of HMM inference, regardless of model behavior.
+    """
+
+    total = 2000
+    output = []
     
-    exp10()
+    for _ in range(100):
+        gen = HMMGenerator()
+        count = 0
+        for i in range(total):
+            seq, y = gen.generate_one_sequence()
+            y_inference = gen.predict(seq)
+            if y != y_inference:
+                count += 1
+                
+        error = count/total
+        print("Fraction of incorrect inferences: %.5f" % (error,))
+        output.append(pd.DataFrame([[count, total, error]], columns = ['err_count', 'total', 'error']))
+    
+    df = pd.concat(output, ignore_index = True)
+    save_output(df, dir_name, "exp11")
+    return df 
+
+
+
+if __name__ == "__main__":
+    dir_name = Path('data/')
+    
+    exp4(dir_name)

@@ -25,10 +25,10 @@ from hotflip import one_flip
 from keras import backend as K
 from keras.layers import Input
 
-def no_perturb(seq, y, aa_vocab = None, model = None):
+def no_perturb(seq, y, aa_vocab, model, generator):
     return seq, {}
 
-def random_pt_mutations(seq, y, aa_vocab, model, k):
+def random_pt_mutations(seq, y, aa_vocab, model, generator, k):
     """
     Mutate k randomly-selected amino acids, to a random distinct character.
     """
