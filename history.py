@@ -91,6 +91,7 @@ class History():
         IS = self._filter_instance_summary(confidence_threshold, perturb_set_idx)
         
         actual_labs = []
+        model_labs = []
         mut_counts = []
         mut_counts_successful = []
         mut_counts_unsuccessful = []
@@ -99,6 +100,7 @@ class History():
             last_line = g.tail(1)
             actual_lab = last_line['actual_label'].values[0]
             actual_labs.append(actual_lab)
+            model_labs.append(int(last_line['pred_proba'].values[0] > 0.5))
             mut_count = last_line['change_number'].values[0]
             mut_counts.append(mut_count)
             if actual_lab == 1:
@@ -106,7 +108,7 @@ class History():
             else:
                 mut_counts_unsuccessful.append(mut_count)
                 
-        return np.mean(actual_labs), np.mean(mut_counts), np.median(mut_counts), np.mean(mut_counts_successful), np.median(mut_counts_successful), np.mean(mut_counts_unsuccessful), np.median(mut_counts_unsuccessful)
+        return np.mean(actual_labs), np.mean(model_labs), np.mean(mut_counts), np.median(mut_counts), np.mean(mut_counts_successful), np.median(mut_counts_successful), np.mean(mut_counts_unsuccessful), np.median(mut_counts_unsuccessful)
     
     def _get_summary_over_confs(self, round_to = 2, perturb_set_idx=None):
         """
@@ -125,6 +127,7 @@ class History():
         conf_cuts = self._get_conf_cuts(perturb_set_idx=perturb_set_idx)
         
         actual_flip_rates = []
+        model_flip_rates = []
         avg_mut_list = []
         median_mut_list = []
         avg_mut_successful_list = []
@@ -133,8 +136,9 @@ class History():
         median_mut_unsuccessful_list = []
         
         for c in conf_cuts:
-            rate, avg_mut, median_mut, avg_mut_successful, median_mut_successful, avg_mut_unsuccessful, median_mut_unsuccessful = self.summary_at_conf(c, perturb_set_idx=perturb_set_idx)
+            rate, model_rate, avg_mut, median_mut, avg_mut_successful, median_mut_successful, avg_mut_unsuccessful, median_mut_unsuccessful = self.summary_at_conf(c, perturb_set_idx=perturb_set_idx)
             actual_flip_rates.append(rate)
+            model_flip_rates.append(model_rate)
             avg_mut_list.append(avg_mut)
             median_mut_list.append(median_mut)
             avg_mut_successful_list.append(avg_mut_successful)
@@ -142,15 +146,29 @@ class History():
             avg_mut_unsuccessful_list.append(avg_mut_unsuccessful)
             median_mut_unsuccessful_list.append(median_mut_unsuccessful)
         
-        return conf_cuts, actual_flip_rates, avg_mut_list, median_mut_list, avg_mut_successful_list, median_mut_successful_list, avg_mut_unsuccessful_list, median_mut_unsuccessful_list
+        return conf_cuts, actual_flip_rates, model_flip_rates, avg_mut_list, median_mut_list, avg_mut_successful_list, median_mut_successful_list, avg_mut_unsuccessful_list, median_mut_unsuccessful_list
     
     def plot_summaries_over_confs(self, perturb_set_idx=None):
-        conf_cuts, actual_flip_rates, avg_mut_list, median_mut_list, avg_mut_successful_list, median_mut_successful_list, avg_mut_unsuccessful_list, median_mut_unsuccessful_list= self._get_summary_over_confs(perturb_set_idx)
+        conf_cuts, actual_flip_rates, model_flip_rates, avg_mut_list, median_mut_list, avg_mut_successful_list, median_mut_successful_list, avg_mut_unsuccessful_list, median_mut_unsuccessful_list= self._get_summary_over_confs(perturb_set_idx)
         
         # Actual label flip rates
         plt.plot(conf_cuts, actual_flip_rates)
         plt.xlabel('Confidence threshold')
         plt.ylabel('Actual label flip rate')
+        save_image(plt, self.dir_name, "actual_flip_rate_confs")
+        plt.show()     
+        plt.clf()
+        
+        # Actual and model label flip rates
+        plt.plot(conf_cuts, model_flip_rates, linestyle=':', color = 'k', label = "Model flip rate")
+        plt.plot(conf_cuts, actual_flip_rates, linestyle='-', color = 'k', label = "Actual label flip rate")
+        plt.plot([0,0], [1,1], linestyle='-', color = 'grey')
+        plt.xlabel('Confidence threshold')
+        plt.ylabel('Flip rate')
+        plt.xlim(0.5, 1)
+        plt.ylim(0.5, 1)
+        
+        plt.legend(loc='lower right')
         save_image(plt, self.dir_name, "actual_flip_rate_confs")
         plt.show()     
         plt.clf()
@@ -383,6 +401,28 @@ class History():
         for c in conf_cuts:
             self.compute_effect_of_errant_mut_at_conf(confidence_threshold = c, active_site = active_site, pad = pad, perturb_set_idx = perturb_set_idx)
     
+    # two distributions - model conf at initial in successful flip vs. unsuccessful flip
+    def success_and_initial_conf(self):
+        conf_success = []
+        conf_non_success = []
+        for _, g in self.instance_summary.groupby('instance'):
+            actual_lab = g.tail(1)['actual_label'].values[0]
+            initial_conf = g.head(1)['init_pred_proba'].values[0]
+            if actual_lab == 1:
+                conf_success.append(initial_conf)
+            else:
+                conf_non_success.append(initial_conf)
+        
+        # Plot histogram
+        plt.hist([conf_success, conf_non_success], 50, density=True, label=["Successful attempts", "Unsuccessful attempts"])
+        plt.xlabel('Initial confidence')
+        plt.ylabel('Normalized count')
+        plt.title('Initial confidence split by success')
+        plt.legend(loc="upper right")
+
+        save_image(plt, self.dir_name, "initial_conf")
+        plt.clf()
+    
     # SAVING
     def save_tables(self, prefix = ""):
         save_output(self.set_summary, self.dir_name, prefix + "set_summary")
@@ -431,12 +471,12 @@ if __name__ == "__main__":
     dir_name = Path('data/')
     file = os.path.join(dir_name, FILE_NAME)
     h = create_history_from_file(file)
-    h.plot_summaries_over_confs()
-    h.mutations_over_confs_violin()
-    h.all_positions_hist()
-    h.positions_by_success()
-    h.first_subsequent_positions()
-    h.positions_activating_mut()
-    h.compute_effect_of_errant_mut()
-    h.save_txt()
+#    h.plot_summaries_over_confs()
+#    h.mutations_over_confs_violin()
+#    h.all_positions_hist()
+#    h.positions_by_success()
+#    h.first_subsequent_positions()
+#    h.positions_activating_mut()
+#    h.compute_effect_of_errant_mut()
+#    h.save_txt()
     

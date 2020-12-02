@@ -227,6 +227,6 @@ def exp11(dir_name):
 
 
 if __name__ == "__main__":
-    dir_name = Path('data/')
+    #dir_name = Path('data/')
     
-    exp4(dir_name)
+    exp10()
