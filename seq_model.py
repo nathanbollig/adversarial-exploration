@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from keras.models import Sequential
 from keras.layers import LSTM
 from keras.layers import Dense
+from keras.layers import Bidirectional
 import pickle
 
 
@@ -46,7 +47,7 @@ def encode_raw_sequences(X_raw, aa_vocab):
 def create_LSTM(X_train, X_val, y_train, y_val, n_epochs = 10):
     # define the  model
     model = Sequential()
-    model.add(LSTM(128, input_shape=(60,20)))
+    model.add(Bidirectional(LSTM(128, input_shape=(60,20))))
     model.add(Dense(32, activation='relu'))
     model.add(Dense(16, activation='relu'))
     model.add(Dense(1, activation='sigmoid'))

@@ -11,6 +11,7 @@ import pathlib
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 class History():
     def __init__(self):
@@ -161,7 +162,7 @@ class History():
         
         # Actual and model label flip rates
         plt.plot(conf_cuts, model_flip_rates, linestyle=':', color = 'k', label = "Model flip rate")
-        plt.plot(conf_cuts, actual_flip_rates, linestyle='-', color = 'k', label = "Actual label flip rate")
+        plt.plot(conf_cuts, actual_flip_rates, linestyle='-', color = 'k', label = "True label flip rate")
         plt.plot([0,0], [1,1], linestyle='-', color = 'grey')
         plt.xlabel('Confidence threshold')
         plt.ylabel('Flip rate')
@@ -192,8 +193,8 @@ class History():
         plt.clf()
         
         # Avg mutation for successful label flip
-        plt.plot(conf_cuts, avg_mut_unsuccessful_list, label="unsuccessful attempts")
-        plt.plot(conf_cuts, avg_mut_successful_list, label="successful attempts")
+        plt.plot(conf_cuts, avg_mut_unsuccessful_list, linestyle='--', color = 'k', label="Unsuccessful attempts")
+        plt.plot(conf_cuts, avg_mut_successful_list, linestyle='-', color = 'k', label="Successful attempts")
         plt.legend(loc="upper left")
         plt.title("Average number of mutations")
         plt.xlabel('Confidence threshold')
@@ -203,8 +204,8 @@ class History():
         plt.clf()
     
         # Median mutation for successful label flip
-        plt.plot(conf_cuts, median_mut_unsuccessful_list, label="unsuccessful attempts")
-        plt.plot(conf_cuts, median_mut_successful_list, label="successful attempts")
+        plt.plot(conf_cuts, median_mut_unsuccessful_list, linestyle='--', color = 'k', label="Unsuccessful attempts")
+        plt.plot(conf_cuts, median_mut_successful_list, linestyle='-', color = 'k', label="Successful attempts")
         plt.legend(loc="upper left")
         plt.title("Median number of mutations")
         plt.xlabel('Confidence threshold')
@@ -212,6 +213,19 @@ class History():
         save_image(plt, self.dir_name, "median_mut_confs_success")
         plt.show()
         plt.clf()
+        
+        # Save raw data
+        data = {}
+        data['conf_cuts'] = conf_cuts
+        data['actual_flip_rates'] = actual_flip_rates
+        data['model_flip_rates'] = model_flip_rates
+        data['avg_mut_list'] = avg_mut_list
+        data['median_mut_list'] = median_mut_list
+        data['avg_mut_successful_list'] = avg_mut_successful_list
+        data['median_mut_successful_list'] = median_mut_successful_list
+        data['avg_mut_unsuccessful_list'] = avg_mut_unsuccessful_list
+        data['median_mut_unsuccessful_list'] = median_mut_unsuccessful_list
+        pd.DataFrame(data).to_csv('data\data_over_conf.csv', index=False)
     
     # NUMBER OF MUTATION VIOLIN PlOTS
     def mut_dist_at_conf(self, confidence_threshold, perturb_set_idx=None):
@@ -258,11 +272,10 @@ class History():
         
         # Plot histogram
         positions = IS['pos_to_change'].to_numpy()
-        plt.hist(positions, 50, density=False, facecolor='g', alpha=0.75)
+        _, self.bins, _ = plt.hist(positions, 60, density=False, facecolor='g', edgecolor='k', alpha=0.75)
         plt.xlabel('Position')
         plt.ylabel('Count')
         plt.title('Mutation location')
-        plt.grid(True)
         save_image(plt, self.dir_name, "all_positions")
         plt.clf()
     
@@ -285,13 +298,11 @@ class History():
                 non_success_positions.extend(g['pos_to_change'].to_numpy())
         
         # Plot histogram
-        plt.hist(success_positions, 50, density=False, facecolor='g', alpha=0.75, label="successful attempts")
-        plt.hist(non_success_positions, 50, density=False, facecolor='b', alpha=0.75, label="unsuccessful attempts")
+        plt.hist([non_success_positions, success_positions], self.bins, density=False, color=['b', 'g'], edgecolor='k', alpha=0.75, label=["Unsuccessful attempts","Successful attempts"], stacked=True)
         plt.xlabel('Position')
         plt.ylabel('Count')
         plt.title('Mutation location')
         plt.legend(loc="upper left")
-        plt.grid(True)
         save_image(plt, self.dir_name, "positions_by_success")
         plt.clf()
     
@@ -313,13 +324,11 @@ class History():
             subsequent_positions.extend(subsequent_pos)
         
         # Plot histogram
-        plt.hist(subsequent_positions, 50, density=False, facecolor='b', alpha=0.5, label="subsequent mutations")
-        plt.hist(first_positions, 50, density=False, facecolor='g', alpha=1, label="initial mutation")
+        plt.hist([first_positions, subsequent_positions], self.bins, density=False, color=['b', 'g'], edgecolor='k', alpha=0.75, label=["Initial mutations","Subsequent mutations"], stacked=True)
         plt.xlabel('Position')
         plt.ylabel('Count')
         plt.title('Mutation location')
         plt.legend(loc="upper left")
-        plt.grid(True)
         save_image(plt, self.dir_name, "positions_by_initial_v_subsequent")
         plt.clf()
     
@@ -339,13 +348,11 @@ class History():
             activating_pos.append(pos)
         
         # Plot histogram
-        plt.hist(positions, 50, density=False, facecolor='b', alpha=0.2, label="all mutations")
-        plt.hist(activating_pos, 50, density=False, facecolor='black', alpha=1, label="activating mutations")
+        plt.hist(positions, self.bins, density=False, alpha=0)
+        plt.hist(activating_pos, self.bins, density=False, facecolor='red', edgecolor='k', alpha=0.75)
         plt.xlabel('Position')
         plt.ylabel('Count')
         plt.title('Locations of activating mutations')
-        plt.legend(loc="upper left")
-        plt.grid(True)
         save_image(plt, self.dir_name, "activating_mut")
         plt.clf()
 
@@ -467,16 +474,16 @@ def save_image(plt, dir_name, name):
 
 
 if __name__ == "__main__":
-    FILE_NAME = '_1606326947.p'
+    FILE_NAME = '_1606933823.p'
     dir_name = Path('data/')
     file = os.path.join(dir_name, FILE_NAME)
     h = create_history_from_file(file)
-#    h.plot_summaries_over_confs()
-#    h.mutations_over_confs_violin()
-#    h.all_positions_hist()
-#    h.positions_by_success()
-#    h.first_subsequent_positions()
-#    h.positions_activating_mut()
-#    h.compute_effect_of_errant_mut()
-#    h.save_txt()
+    h.plot_summaries_over_confs()
+    h.mutations_over_confs_violin()
+    h.all_positions_hist()
+    h.positions_by_success()
+    h.first_subsequent_positions()
+    h.positions_activating_mut()
+    h.compute_effect_of_errant_mut()
+    h.save_txt()
     
