@@ -133,7 +133,7 @@ def exp7(dir_name):
     """
     from perturbations import hot_flip
     
-    output, instance_output = perturbation_pipeline(p=0.5, n_generated = 5000, num_to_perturb = 500, perturb = hot_flip, n_epochs = 25, legacy_output = True)
+    output, instance_output = perturbation_pipeline(p=0.5, n_generated = 10000, num_to_perturb = 400, perturb = hot_flip, n_epochs = 25, legacy_output = True)
     save_output(output, dir_name, "exp7")
     save_output(instance_output, dir_name, "exp7instance")
     
@@ -227,6 +227,7 @@ def exp11(dir_name):
 
 
 if __name__ == "__main__":
-    #dir_name = Path('data/')
+    dir_name = Path('data/')
     
-    exp10()
+    #exp7(dir_name)
+    exp11(dir_name)

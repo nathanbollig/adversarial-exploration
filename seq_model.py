@@ -5,7 +5,7 @@ Created on Thu Oct 22 10:08:01 2020
 @author: NBOLLIG
 """
 #from generator import MarkovChainGenerator
-from HMM_generator import HMMGenerator
+from HMM_generator_motif import HMMGenerator
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
@@ -112,7 +112,7 @@ def main(name, num_instances=5000, p=0.5):
         others as in big_bang
     """
     
-    model, _, X_list, y_list, _, _ = big_bang(num_instances=num_instances, p=p)
+    model, _, X_list, y_list, gen, _ = big_bang(num_instances=num_instances, p=p)
     model.save(name+'_keras_model')
     with open(name+'_X_list.pkl', 'wb') as f:
         pickle.dump(X_list, f)
