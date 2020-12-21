@@ -112,12 +112,12 @@ def main(name, num_instances=5000, p=0.5):
         others as in big_bang
     """
     
-    model, _, X_list, y_list, gen, _ = big_bang(num_instances=num_instances, p=p)
-    model.save(name+'_keras_model')
-    with open(name+'_X_list.pkl', 'wb') as f:
-        pickle.dump(X_list, f)
-    with open(name+'_y_list.pkl', 'wb') as f:
-        pickle.dump(y_list, f)
+    model, result, X_list, y_list, gen, aa_vocab = big_bang(num_instances=10000, p=0.5, class_signal=10, n_epochs=25)
+#    model.save(name+'_keras_model')
+#    with open(name+'_X_list.pkl', 'wb') as f:
+#        pickle.dump(X_list, f)
+#    with open(name+'_y_list.pkl', 'wb') as f:
+#        pickle.dump(y_list, f)
 
 #    with open(name+'_m0.pkl', 'wb') as f:
 #        pickle.dump(m0, f)

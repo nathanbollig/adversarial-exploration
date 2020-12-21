@@ -474,7 +474,7 @@ def save_image(plt, dir_name, name):
 
 
 if __name__ == "__main__":
-    FILE_NAME = '_1606933823.p'
+    FILE_NAME = '_1608566313.p'
     dir_name = Path('data/')
     file = os.path.join(dir_name, FILE_NAME)
     h = create_history_from_file(file)

@@ -5,7 +5,7 @@ Created on Tue Nov  3 09:37:51 2020
 @author: NBOLLIG
 """
 from seq_model import big_bang
-from HMM_generator import HMMGenerator
+from HMM_generator_motif import HMMGenerator
 from pipeline import perturbation_pipeline
 
 from pathlib import Path
@@ -68,7 +68,7 @@ def exp3(dir_name):
     """
     gen = HMMGenerator()
     count = 0
-    total = 10000
+    total = 10
     
     
     for i in range(total):
@@ -195,7 +195,7 @@ def exp10():
     perturb_args['confidence_threshold'] = [0.999]
     
     dir_name = Path('data/')
-    h = perturbation_pipeline(p=0.5, n_generated = 10000, num_to_perturb = 400, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 25, dir_name=dir_name)
+    h = perturbation_pipeline(p=0.5, n_generated = 10000, num_to_perturb = 400, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 75, dir_name=dir_name)
     h.save_tables()
     h.save()
 
@@ -204,10 +204,10 @@ def exp11(dir_name):
     Quantify error of HMM inference, regardless of model behavior.
     """
 
-    total = 2000
+    total = 5000
     output = []
     
-    for _ in range(100):
+    for _ in range(5):
         gen = HMMGenerator()
         count = 0
         for i in range(total):
@@ -224,10 +224,23 @@ def exp11(dir_name):
     save_output(df, dir_name, "exp11")
     return df 
 
+def exp12():
+    """
+    Main experiment for greedy character flip - For modifying parameters
+    """
+    from perturbations import greedy_flip
+    
+    perturb_args = {}
+    perturb_args['confidence_threshold'] = [0.999]
+    
+    dir_name = Path('data/')
+    h = perturbation_pipeline(p=0.5, n_generated = 10000, class_signal = 100, num_to_perturb = 100, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 75, dir_name=dir_name)
+    h.save_tables()
+    h.save()
 
 
 if __name__ == "__main__":
     dir_name = Path('data/')
     
-    #exp7(dir_name)
-    exp11(dir_name)
+    #exp1(dir_name)
+    exp12()
