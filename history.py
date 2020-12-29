@@ -225,7 +225,7 @@ class History():
         data['median_mut_successful_list'] = median_mut_successful_list
         data['avg_mut_unsuccessful_list'] = avg_mut_unsuccessful_list
         data['median_mut_unsuccessful_list'] = median_mut_unsuccessful_list
-        pd.DataFrame(data).to_csv('data\data_over_conf.csv', index=False)
+        pd.DataFrame(data).to_csv(os.path.join(self.dir_name, "data_over_conf.csv"), index=False)
     
     # NUMBER OF MUTATION VIOLIN PlOTS
     def mut_dist_at_conf(self, confidence_threshold, perturb_set_idx=None):
@@ -356,6 +356,30 @@ class History():
         save_image(plt, self.dir_name, "activating_mut")
         plt.clf()
 
+    def loss_positional_dist(self, perturb_set_idx = None):
+        IS = self.instance_summary.copy()
+        
+        # Perturb set filter
+        if perturb_set_idx != None:
+            IS = IS.loc[IS['perturb_set_idx'] == perturb_set_idx]
+        
+        # Gather lists
+        length = 60 # TODO: change for variable length
+        losses = [[] for _ in range(length)]
+        
+        for _, row in IS.iterrows():
+            losses[int(row['pos_to_change'])].append(row['max_loss_increase'])
+        
+        # Plot histogram
+        flierprops = dict(marker='o', markersize=0.8, markeredgecolor='g')
+        plt.boxplot(losses, positions=list(range(length)), flierprops=flierprops)
+        plt.xlabel('Position')
+        plt.ylabel('Loss increase')
+        plt.xticks(fontsize=6, rotation=90)
+        plt.title('Loss increases achieved at each position')
+        save_image(plt, self.dir_name, "loss_positional")
+        plt.clf()
+
     def compute_effect_of_errant_mut_at_conf(self, confidence_threshold = 0.999, active_site = [25, 34], pad = 5, perturb_set_idx = None):
         """
         Compute the effect of errant/background mutations (at positions outside of active_site) on actual 
@@ -474,16 +498,17 @@ def save_image(plt, dir_name, name):
 
 
 if __name__ == "__main__":
-    FILE_NAME = '_1608566313.p'
+    FILE_NAME = '_1608409120.p'
     dir_name = Path('data/')
     file = os.path.join(dir_name, FILE_NAME)
     h = create_history_from_file(file)
-    h.plot_summaries_over_confs()
-    h.mutations_over_confs_violin()
-    h.all_positions_hist()
-    h.positions_by_success()
-    h.first_subsequent_positions()
-    h.positions_activating_mut()
-    h.compute_effect_of_errant_mut()
-    h.save_txt()
+#    h.plot_summaries_over_confs()
+#    h.mutations_over_confs_violin()
+#    h.all_positions_hist()
+#    h.positions_by_success()
+#    h.first_subsequent_positions()
+#    h.positions_activating_mut()
+    h.loss_positional_dist()
+#    h.compute_effect_of_errant_mut()
+#    h.save_txt()
     
