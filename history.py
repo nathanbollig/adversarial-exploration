@@ -456,8 +456,10 @@ class History():
     
     # SAVING
     def save_tables(self, prefix = ""):
-        save_output(self.set_summary, self.dir_name, prefix + "set_summary")
-        save_output(self.instance_summary, self.dir_name, prefix + "instance_summary")
+        if hasattr(self, 'set_summary') == True:
+            save_output(self.set_summary, self.dir_name, prefix + "set_summary")
+        if hasattr(self, 'instance_summary') == True:
+            save_output(self.instance_summary, self.dir_name, prefix + "instance_summary")
 
     def save(self, prefix = ""):
         timestamp = str(int(datetime.datetime.now().timestamp()))
@@ -498,17 +500,17 @@ def save_image(plt, dir_name, name):
 
 
 if __name__ == "__main__":
-    FILE_NAME = '_1608409120.p'
+    FILE_NAME = '_1609424175.p'
     dir_name = Path('data/')
     file = os.path.join(dir_name, FILE_NAME)
     h = create_history_from_file(file)
-#    h.plot_summaries_over_confs()
-#    h.mutations_over_confs_violin()
-#    h.all_positions_hist()
-#    h.positions_by_success()
-#    h.first_subsequent_positions()
-#    h.positions_activating_mut()
+    h.plot_summaries_over_confs()
+    h.mutations_over_confs_violin()
+    h.all_positions_hist()
+    h.positions_by_success()
+    h.first_subsequent_positions()
+    h.positions_activating_mut()
     h.loss_positional_dist()
-#    h.compute_effect_of_errant_mut()
-#    h.save_txt()
+    h.compute_effect_of_errant_mut()
+    h.save_txt()
     

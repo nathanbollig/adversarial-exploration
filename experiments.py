@@ -195,7 +195,7 @@ def exp10():
     perturb_args['confidence_threshold'] = [0.999]
     
     dir_name = Path('data/')
-    h = perturbation_pipeline(p=0.5, n_generated = 10000, num_to_perturb = 400, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 75, dir_name=dir_name)
+    h = perturbation_pipeline(p=0.5, n_generated = 10000, model_type='LR', num_to_perturb = 400, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 75, dir_name=dir_name)
     h.save_tables()
     h.save()
 
@@ -226,7 +226,7 @@ def exp11(dir_name):
 
 def exp12():
     """
-    Main experiment for greedy character flip - For modifying parameters
+    Main experiment for greedy character flip - For testing
     """
     from perturbations import greedy_flip
     
@@ -234,7 +234,7 @@ def exp12():
     perturb_args['confidence_threshold'] = [0.999]
     
     dir_name = Path('data/')
-    h = perturbation_pipeline(p=0.5, n_generated = 10000, class_signal = 100, num_to_perturb = 100, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 75, dir_name=dir_name)
+    h = perturbation_pipeline(p=0.5, n_generated = 10000, class_signal = 100, model_type='LR', num_to_perturb = 100, perturb = greedy_flip, perturb_args = perturb_args, n_epochs = 75, dir_name=dir_name)
     h.save_tables()
     h.save()
 

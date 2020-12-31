@@ -24,6 +24,7 @@ from utils import decode_from_one_hot, encode_as_one_hot
 from hotflip import one_flip
 from keras import backend as K
 from keras.layers import Input
+import numpy as np
 
 def no_perturb(seq, y, aa_vocab, model, generator):
     return seq, {}
@@ -66,23 +67,23 @@ def derive_gradient_funct(model):
     grad_ce = K.gradients(ce, model.inputs)
     return K.function(model.inputs + [y_true], grad_ce)
 
-def greedy_flip(seq, y, aa_vocab, model, generator, confidence_threshold = 0.5):
+def greedy_flip(seq, y, aa_vocab, model, generator=None, n_positions=60, n_characters=20, confidence_threshold = 0.5):
     """
     Greedily iterate hot flip until the predicted class label flips and the
     resulting prediction has confidence >= confidence_threshold.
     """
-    seq = encode_as_one_hot(seq)
+    seq = encode_as_one_hot(seq, n_positions=n_positions, n_characters=n_characters)
     pred = y
     conf = 0
     data = []
-    init_pred_proba = model.predict(seq.reshape(1,60,20)).item()
+    init_pred_proba = model.predict(seq.reshape(1,n_positions, n_characters)).item()
     i = 1
     grad_function = derive_gradient_funct(model) # Only get the gradient from the keras model once to avoid mem leak
     
     while i < len(seq) and (int(y) == pred or conf < confidence_threshold):
         print('.', end='') # one dot per character flip
-        seq, one_flip_data = one_flip(grad_function, seq, y)
-        pred_proba = model.predict(seq.reshape(1,60,20)).item()
+        seq, one_flip_data = one_flip(grad_function, seq, y, n_positions=n_positions, n_characters=n_characters)
+        pred_proba = model.predict(seq.reshape(1, n_positions, n_characters)).item()
         pred = int(pred_proba > 0.5)
         
         if int(y) == 0:
@@ -94,12 +95,13 @@ def greedy_flip(seq, y, aa_vocab, model, generator, confidence_threshold = 0.5):
         one_flip_data['conf'] = conf
         one_flip_data['init_pred_proba'] = init_pred_proba
         one_flip_data['change_number'] = i
-        one_flip_data['actual_label'] = generator.predict(decode_from_one_hot(seq))
+        if generator != None:
+            one_flip_data['actual_label'] = generator.predict(decode_from_one_hot(seq))
         data.append(one_flip_data)
         i += 1
     
     print('')
-    return decode_from_one_hot(seq), data
+    return decode_from_one_hot(seq, n_positions=n_positions, n_characters=n_characters), data
     
     
     

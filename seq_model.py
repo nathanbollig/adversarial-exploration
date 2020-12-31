@@ -12,6 +12,7 @@ from keras.models import Sequential
 from keras.layers import LSTM
 from keras.layers import Dense
 from keras.layers import Bidirectional
+from keras.layers import Flatten
 import pickle
 
 
@@ -69,13 +70,37 @@ def create_LSTM(X_train, X_val, y_train, y_val, n_epochs = 10):
     
     return model, result
 
-def big_bang(num_instances=5000, p=0.5, class_signal=10, n_epochs=10):
+def create_LR(X_train, X_val, y_train, y_val, n_epochs = 10):
+    # define the  model
+    model = Sequential()
+    model.add(Flatten())
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    
+    # Train model
+    model.fit(X_train, y_train, epochs=n_epochs, batch_size=64, verbose=1)
+    
+    # Evaluate on train set
+    result = {}
+    _, train_accuracy = model.evaluate(X_train, y_train, verbose=0)
+    result['model_train_accuracy'] = train_accuracy
+    print('Train Accuracy: %.2f' % (train_accuracy*100))
+    
+    # Evaluate on validation set
+    _, val_accuracy = model.evaluate(X_val, y_val, verbose=0)
+    result['model_val_accuracy'] = val_accuracy
+    print('Validation Accuracy: %.2f' % (val_accuracy*100))
+    
+    return model, result
+
+def big_bang(num_instances=5000, p=0.5, class_signal=10, n_epochs=10, model_type='LSTM'):
     """
     Generates sequence data and trains a model.
     
     Parameters:
         num_instances: the number of total instances to generate
         p: positive (1) class prevalance
+        model_type: string designating type of model to be created
     
     
     Returns:
@@ -101,7 +126,12 @@ def big_bang(num_instances=5000, p=0.5, class_signal=10, n_epochs=10):
     X_val, X_test, y_val, y_test = train_test_split(X_val, y_val, test_size=0.5, random_state=1)
     
     # Define model
-    model, result = create_LSTM(X_train, X_val, y_train, y_val, n_epochs=n_epochs)
+    if model_type == 'LSTM':
+        model_fn = create_LSTM
+    elif model_type == 'LR':
+        model_fn = create_LR
+    
+    model, result = model_fn(X_train, X_val, y_train, y_val, n_epochs=n_epochs)
     
     return model, result, [X_train, X_val, X_test], [y_train, y_val, y_test], gen, aa_vocab
 

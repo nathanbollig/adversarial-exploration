@@ -7,11 +7,33 @@ Created on Sat Nov 14 20:50:11 2020
 import numpy as np
 from keras.utils import to_categorical
 
-def decode_from_one_hot(x):
-    return np.argmax(x, axis=1, out=None).reshape(1, -1).tolist()[0]
+def decode_from_one_hot(x, n_positions=60, n_characters=20):
+    """
+    Convert one-hot vector representation to integers. If all zeros, then returns -1 in that position.
+    Expecting x in the shape of (n_positions, n_characters) but there is one extra gap character for the all-zero vector.
+    """
+    x = np.array(x).reshape((n_positions, n_characters))
+    integers = np.argmax(x, axis=1, out=None).reshape(1, -1).tolist()[0]
+    for i in range(x.shape[0]):
+        if np.count_nonzero(x[i]) == 0:
+            integers[i] = -1
+    return integers
 
-def encode_as_one_hot(x):
-    return to_categorical(x, num_classes=20).reshape(60,20)
+def encode_as_one_hot(x, n_positions=60, n_characters=20):
+    """
+    Convert array of integers to one-hot vector representation. If integer is -1, maps to all-zero vector.
+    """
+    x = np.array(x)
+    if x.shape == (n_positions, n_characters):
+        return x
+    elif x.shape == (n_positions * n_characters,):
+        return x.reshape((n_positions, n_characters))
+    else:
+        output = to_categorical(np.array(x), num_classes=n_characters).reshape(n_positions, n_characters)
+        for i in range(n_positions):
+            if x[i] == -1:
+                output[i] = np.zeros((n_characters,))
+        return np.array(output)
 
 def plot_aa_dist(pos, X_list, y_list, aa_vocab, class_label=None):
     """

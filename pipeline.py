@@ -115,7 +115,7 @@ def perturb_one_set(model, generator, X, y_init, aa_vocab, perturb, perturb_args
     
     return set_summary_line, instance_data
 
-def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs = 75, num_to_perturb = 500, perturb = None, perturb_args = None, dir_name="", legacy_output = False):
+def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, model_type=None, n_epochs = 75, num_to_perturb = 500, perturb = None, perturb_args = None, dir_name="", legacy_output = False):
     """
     Runs the perturbation pipeline. If multiple sets of parameters are provided to the perturb method, 
     perturbation takes place in multiple independent runs.
@@ -153,7 +153,7 @@ def perturbation_pipeline(p = 0.5, class_signal=10, n_generated = 5000, n_epochs
         dir_name = Path(os.getcwd())
     h.set_dir(dir_name)
     
-    model, h.result, X_list, y_list, generator, aa_vocab = big_bang(class_signal=class_signal, num_instances=n_generated, p=p, n_epochs = n_epochs)
+    model, h.result, X_list, y_list, generator, aa_vocab = big_bang(class_signal=class_signal, num_instances=n_generated, p=p, model_type=model_type, n_epochs = n_epochs)
     _, _, X_test = X_list
     _, _, y_test = y_list
     
