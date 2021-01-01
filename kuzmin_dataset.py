@@ -130,6 +130,7 @@ for entry in sequences:
         SARS2_sequences.append(entry)
     elif entry.virus_species == 'SARS_CoV_2':
         bat_sequence = entry
+        SARS2_sequences.append(entry) # If the bat sequence should be in the training set
     else:
         training_sequences.append(entry)
 
@@ -148,7 +149,7 @@ from keras.layers import Flatten
 import numpy as np
 
 # define the  model
-EPOCHS = 10
+EPOCHS = 8
 N_POS = 2396
 N_CHAR = 25
 model = Sequential()
@@ -173,6 +174,9 @@ _, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
 result['model_test_accuracy'] = test_accuracy
 print('Test Accuracy: %.2f' % (test_accuracy*100))
 
+# Fit on entire dataset for MM - so now train on test portion
+model.fit(X_test, y_test, epochs=2, batch_size=64, verbose=1)
+
 # =============================================================================
 # Apply MM to x_bat
 # =============================================================================
@@ -183,7 +187,7 @@ from pathlib import Path
 import pandas as pd
 aa_vocab = list('ABCDEFGHIJKLMNPQRSTUVWXYZ')
 
-x_perturb, data = greedy_flip(x_bat, 0, aa_vocab, model, generator=None, n_positions=N_POS, n_characters=N_CHAR, confidence_threshold = 0.999)
+x_perturb, data = greedy_flip(x_bat, 0, aa_vocab, model, generator=None, n_positions=N_POS, n_characters=N_CHAR, confidence_threshold = 0.99995)
 data = pd.DataFrame(data)
 
 h = History()
@@ -285,11 +289,13 @@ for j in range(1, len(X_SARS2)):
         else:
             occurences[i] += 1
 
+import matplotlib.pyplot as plt
+
 MM_pos = []
 for i in range(N_POS):
     if np.all(x_bat_enc[i] == x_perturb[i]) == False:
         MM_pos.append(i)
-bins = np.linspace(0, 2396, 120)
+bins = np.linspace(0, 2396, 35)
 plt.hist(list(consensus), bins, density=False, facecolor='b', edgecolor='k', alpha=0.7, label='Contained in all human CoV 2')
 plt.hist(MM_pos, bins, density=False, facecolor='y', edgecolor='k', alpha=0.7, label='MM')
 
@@ -353,7 +359,7 @@ def remove_gaps(x, data):
         unique, counts = np.unique(x[:position], return_counts=True)
         num_gaps = int(dict(zip(unique, counts)).get(-1))
         new_position = position - num_gaps
-        row['pos_to_change'] = new_position    
+        data.loc[index, 'pos_to_change'] = new_position    
     x = x[x != -1]    
     return x, data
 
@@ -368,7 +374,87 @@ h.instance_summary = data_corrected
 h.save_tables()
 h.save()        
 
+"""
+Loss vs. positions - takes a long time and is too crowded
+Shows outliers throughout first 2/3 of positions
+"""
 
+#length = len(x_corrected)
+#losses = [[] for _ in range(length)]
+#
+#for _, row in data_corrected.iterrows():
+#    losses[int(row['pos_to_change'])].append(row['max_loss_increase'])
+#
+## Plot histogram
+#flierprops = dict(marker='o', markersize=0.8, markeredgecolor='g')
+#plt.boxplot(losses, positions=list(range(length)), flierprops=flierprops)
+#plt.xlabel('Position')
+#plt.ylabel('Loss increase')
+#plt.xticks(fontsize=6, rotation=90)
+#plt.title('Loss increases achieved at each position')
+#save_image(plt, h.dir_name, "loss_positional")
+#plt.clf()
 
+# =============================================================================
+# Try including all SARS CoV 2 viruses in the training set
+# =============================================================================
 
+X, y = EncodeAndTarget(sequences)
 
+# define the  model
+EPOCHS = 8
+N_POS = 2396
+N_CHAR = 25
+model = Sequential()
+model.add(Flatten(input_shape=(N_POS, N_CHAR)))
+model.add(Dense(1, activation='sigmoid', input_shape=(N_POS * N_CHAR,)))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(np.array(X).reshape((-1, N_POS, N_CHAR)), np.array(y), test_size=0.2, random_state=1)
+
+# Train model
+model.fit(X_train, y_train, epochs=EPOCHS, batch_size=64, verbose=1)
+
+# Evaluate on train set
+result = {}
+_, train_accuracy = model.evaluate(X_train, y_train, verbose=0)
+result['model_train_accuracy'] = train_accuracy
+print('Train Accuracy: %.2f' % (train_accuracy*100))
+
+# Evaluate on validation set
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+result['model_test_accuracy'] = test_accuracy
+print('Test Accuracy: %.2f' % (test_accuracy*100))
+
+# Fit on entire dataset for MM - so now train on test portion
+model.fit(X_test, y_test, epochs=2, batch_size=64, verbose=1)
+
+x_perturb, data = greedy_flip(x_bat, 0, aa_vocab, model, generator=None, n_positions=N_POS, n_characters=N_CHAR, confidence_threshold = 0.9999)
+data = pd.DataFrame(data)
+
+x_bat_enc = encode_as_one_hot(x_bat, n_positions=N_POS, n_characters=N_CHAR)
+x_perturb = encode_as_one_hot(x_perturb, n_positions=N_POS, n_characters=N_CHAR)
+MM_pos = []
+for i in range(N_POS):
+    if np.all(x_bat_enc[i] == x_perturb[i]) == False:
+        MM_pos.append(i)
+bins = np.linspace(0, 2396, 35)
+plt.hist(list(consensus), bins, density=False, facecolor='b', edgecolor='k', alpha=0.7, label='Contained in all human CoV 2')
+plt.hist(MM_pos, bins, density=False, facecolor='y', edgecolor='k', alpha=0.7, label='MM')
+plt.xlabel('Position')
+plt.ylabel('Count')
+plt.legend(fontsize='small')
+plt.title('Mutations relative to bat SARS CoV2')
+
+h = History()
+h.set_dir(Path('data/'))
+h.result = result
+h.instance_summary = data
+h.save_tables()
+h.save()
+
+"""
+Bottom line is that even including the human SARS CoV 2 in the model's training 
+set does not improve the MM outcomes starting from the bat sequence
+"""     
