@@ -227,7 +227,7 @@ plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of human and non-human classes at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_classes_scatter.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_classes_scatter.jpg', dpi=400)
 plt.clf()
 
 plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
@@ -235,7 +235,7 @@ plt.colorbar()
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of human and non-human classes at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_classes_heatmap.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_classes_heatmap.jpg', dpi=400)
 plt.clf()
 
 # =============================================================================
@@ -271,7 +271,7 @@ plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of bat and human classes at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_bat_scatter.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_bat_scatter.jpg', dpi=400)
 plt.clf()
 
 plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
@@ -279,8 +279,10 @@ plt.colorbar()
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of bat and human classes at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_bat_heatmap.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_bat_heatmap.jpg', dpi=400)
 plt.clf()
+
+cossim_b = cossim_vals
 
 # =============================================================================
 # Compute MM sequence
@@ -322,7 +324,6 @@ print('Test Accuracy: %.2f' % (test_accuracy*100))
 model.fit(X_test, y_test, epochs=2, batch_size=64, verbose=1)
 
 from perturbations import greedy_flip
-from history import History
 
 aa_vocab = list('ABCDEFGHIJKLMNPQRSTUVWXYZ')
 
@@ -361,7 +362,7 @@ plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of MM and human classes at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_MM_scatter.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_MM_scatter.jpg', dpi=400)
 plt.clf()
 
 plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
@@ -369,8 +370,10 @@ plt.colorbar()
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of MM and human classes at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_MM_heatmap.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_MM_heatmap.jpg', dpi=400)
 plt.clf()
+
+cossim_c = cossim_vals
 
 # =============================================================================
 # Visualization d: bat vs. MM
@@ -388,7 +391,7 @@ plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of bat and MM at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_batvMM_scatter.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_batvMM_scatter.jpg', dpi=400)
 plt.clf()
 
 plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
@@ -396,7 +399,7 @@ plt.colorbar()
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of bat and MM at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_batvMM_heatmap.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_batvMM_heatmap.jpg', dpi=400)
 plt.clf()
 
 # =============================================================================
@@ -450,7 +453,7 @@ plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of human and SARS CoV 2 at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_humanvCoV2_scatter.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_humanvCoV2_scatter.jpg', dpi=400)
 plt.clf()
 
 plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
@@ -458,7 +461,7 @@ plt.colorbar()
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of human and SARS CoV 2 at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_humanvCoV2_heatmap.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_humanvCoV2_heatmap.jpg', dpi=400)
 plt.clf()
 
 # =============================================================================
@@ -477,7 +480,7 @@ plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of bat and SARS CoV 2 at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_batvCoV2_scatter.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_batvCoV2_scatter.jpg', dpi=400)
 plt.clf()
 
 plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
@@ -485,8 +488,10 @@ plt.colorbar()
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of bat and SARS CoV 2 at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_batvCoV2_heatmap.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_batvCoV2_heatmap.jpg', dpi=400)
 plt.clf()
+
+cossim_f = cossim_vals
 
 # =============================================================================
 # Visualization g: MM vs. SARS CoV 2
@@ -504,7 +509,7 @@ plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of MM and SARS CoV 2 at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_MMvCoV2_scatter.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_MMvCoV2_scatter.jpg', dpi=400)
 plt.clf()
 
 plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
@@ -512,8 +517,62 @@ plt.colorbar()
 plt.xlabel('Position')
 plt.ylabel('Cosine similarity')
 plt.title('Similarity of MM and SARS CoV 2 at each position: %.4f' % (sim,))
-plt.savefig('kuz3_cossim_MMvCoV2_heatmap.jpg', dpi=400)
+#plt.savefig('kuz3_cossim_MMvCoV2_heatmap.jpg', dpi=400)
 plt.clf()
+
+cossim_g = cossim_vals
+# =============================================================================
+# Comparing b (bat vs human) to c (MM vs. human)
+# =============================================================================
+
+# Note np.all(np.isnan(cossim_b) == np.isnan(cossim_c)) is true
+
+bad_indices = np.isnan(cossim_b)
+good_indices = ~bad_indices
+x = np.array(range(N_POS))[good_indices]
+b = np.array(cossim_b)[good_indices]
+c = np.array(cossim_c)[good_indices]
+y = c-b
+avg = np.mean(y) # 0.009397929011614386
+
+plt.scatter(x, y, facecolors='none', edgecolors='r', linewidth=0.5, s=2)
+plt.xlabel('Position')
+plt.ylabel('Difference in cosine similarity')
+plt.title('Comparing similarity of MM to human vs. bat to human (mean: %.3f)' % (avg,))
+plt.ylim(-1.1,1.1)
+plt.savefig('kuz3_cossim_comp1_scatter.jpg', dpi=400)
+plt.clf()
+
+# =============================================================================
+# Comparing f (bat vs human SARS CoV 2) to g (MM vs. human SARS CoV 2)
+# =============================================================================
+
+# Note np.all(np.isnan(cossim_f) == np.isnan(cossim_g)) is true
+
+bad_indices = np.isnan(cossim_f)
+good_indices = ~bad_indices
+x = np.array(range(N_POS))[good_indices]
+f = np.array(cossim_f)[good_indices]
+g = np.array(cossim_g)[good_indices]
+y = g-f
+avg = np.mean(y) # 0.009397929011614386
+
+plt.scatter(x, y, facecolors='none', edgecolors='r', linewidth=0.5, s=2)
+plt.xlabel('Position')
+plt.ylabel('Difference in cosine similarity')
+plt.title('Comparing similarity of MM to CoV 2 vs. bat to CoV 2 (mean: %.3f)' % (avg,))
+plt.ylim(-1.1,1.1)
+plt.savefig('kuz3_cossim_comp2_scatter.jpg', dpi=400)
+plt.clf()
+
+
+
+
+
+
+
+
+
 
 ## =============================================================================
 ## Train a classifier
