@@ -309,6 +309,21 @@ X_train, X_test, y_train, y_test = train_test_split(np.array(X_train).reshape((-
 # Train model
 model.fit(X_train, y_train, epochs=EPOCHS, batch_size=64, verbose=1)
 
+# PR curve
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import average_precision_score
+import matplotlib.pyplot as plt
+
+y_proba = model.predict_proba(X_test)
+precision, recall, thresholds = precision_recall_curve(y_test, y_proba)
+ap = average_precision_score(y_test, y_proba)
+fig, ax = plt.subplots()
+ax.plot(recall, precision)
+ax.set(xlabel='Recall', ylabel='Precision', title='Sequence classification model (AP=%.3f)' % (ap,))
+ax.grid()
+#fig.savefig("pr_curve2.jpg", dpi=500)
+plt.show()
+
 # Evaluate on train set
 result = {}
 _, train_accuracy = model.evaluate(X_train, y_train, verbose=0)
