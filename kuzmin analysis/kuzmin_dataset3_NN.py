@@ -187,12 +187,57 @@ def cossim_from_seqs(seq1, seq2, N_POS=2396, N_CHAR=25):
     
     return cossim_vals, x, y, sim
 
+aa_vocab = list('ABCDEFGHIJKLMNPQRSTUVWXYZ-')
+def sim_score(seq1, seq2, N_POS=2396, N_CHAR=25):
+    """
+    Return score(seq1, seq2) / score(seq1, seq1)
+    """
+    # Convert flattened one-hot representation to character string
+    seq1 = decode_from_one_hot(seq1, n_positions=N_POS, n_characters=N_CHAR)
+    seq2 = decode_from_one_hot(seq2, n_positions=N_POS, n_characters=N_CHAR)
+    seq1 = ''.join([aa_vocab[i] for i in seq1])
+    seq2 = ''.join([aa_vocab[i] for i in seq2])
+    
+    # Conpute similarity
+    return score_pairwise(seq1, seq2) / score_pairwise(seq1, seq1)
+
+from Bio.SubsMat import MatrixInfo
+
+def score_match(pair, matrix):
+    if pair not in matrix:
+        return matrix[(tuple(reversed(pair)))]
+    else:
+        return matrix[pair]
+
+def score_pairwise(seq1, seq2, matrix=MatrixInfo.blosum62, gap_s=-2, gap_e=-1):
+    """
+    Takes two sequences of aa characters, already aligned. Returns the similarity score.
+    """
+    score = 0
+    gap = False
+    for i in range(len(seq1)):
+        pair = (seq1[i], seq2[i])
+        if not gap:
+            if '-' in pair:
+                gap = True
+                score += gap_s
+            else:
+                score += score_match(pair, matrix)
+        else:
+            if '-' not in pair:
+                gap = False
+                score += score_match(pair, matrix)
+            else:
+                score += gap_e
+    return score
+
+
 # Compute similarity of bat sequence to each training sequence
 
 similarities = []
 for j in range(len(X_train)):
     x_encoded = X_train[j]
-    _, _, _, sim = cossim_from_seqs(x_encoded, x_bat, N_POS=2396, N_CHAR=25)
+    sim = sim_score(x_encoded, x_bat, N_POS=2396, N_CHAR=25)
     similarities.append(sim)
 
 # Merge similarity info into training set
@@ -279,7 +324,7 @@ x_MM = x_MM.reshape((-1, N_POS, N_CHAR))
 MM_similarities = []
 for j in range(len(X_train_original)):
     x_encoded = X_train_original[j]
-    _, _, _, sim = cossim_from_seqs(x_encoded, x_MM, N_POS=2396, N_CHAR=25)
+    sim = sim_score(x_encoded, x_MM, N_POS=2396, N_CHAR=25)
     MM_similarities.append(sim)
 
 # Merge similarity info into training set
@@ -291,7 +336,7 @@ for i in range(len(training_sequences)):
     sim_after = MM_similarities[i]
     output.append(defline + '|' + str(sim_before) + '|' + str(sim_after))
 
-#np.savetxt('training_set_sims.csv', output, fmt='%s')
+np.savetxt('training_set_sims.csv', output, fmt='%s')
 
 # =============================================================================
 # Compute similarity wrt human SARS CoV 2 before and after MM
@@ -300,14 +345,14 @@ for i in range(len(training_sequences)):
 similarities = []
 for j in range(len(X_SARS2)):
     x_encoded = X_SARS2[j]
-    _, _, _, sim = cossim_from_seqs(x_encoded, x_bat, N_POS=2396, N_CHAR=25)
+    sim = sim_score(x_encoded, x_bat, N_POS=2396, N_CHAR=25)
     similarities.append(sim)
     
 # Compute similarity of MM to each sequence
 MM_similarities = []
 for j in range(len(X_SARS2)):
     x_encoded = X_SARS2[j]
-    _, _, _, sim = cossim_from_seqs(x_encoded, x_MM, N_POS=2396, N_CHAR=25)
+    sim = sim_score(x_encoded, x_MM, N_POS=2396, N_CHAR=25)
     MM_similarities.append(sim)
 
 # Merge similarity info into set
@@ -320,241 +365,241 @@ for i in range(len(SARS2_sequences)):
 
 np.savetxt('human_CoV2_sims.csv', output, fmt='%s')
 
-# =============================================================================
-# Compute MM distribution
-# =============================================================================
-
-x = x_MM
-
-x_MM_dist = [[] for _ in range(N_POS)]
-for i in range(N_POS):
-    aa_index = x[i]
-    if aa_index == -1:
-        continue
-    
-    vec = np.zeros((N_CHAR,))
-    vec[aa_index] = 1
-    
-    x_MM_dist[i] = vec
-
-# =============================================================================
-# Visualization c: MM vs. human (in training set)
-# =============================================================================
-
-cossim_vals = [cosine_similarity(pos_dist[i], x_MM_dist[i]) for i in range(N_POS)]
-
-bad_indices = np.isnan(cossim_vals)
-good_indices = ~bad_indices
-x = np.array(range(N_POS))[good_indices]
-y = np.array(cossim_vals)[good_indices]
-sim = np.mean(y)
-
-plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
-plt.xlabel('Position')
-plt.ylabel('Cosine similarity')
-plt.title('Similarity of MM and human classes at each position: %.4f' % (sim,))
-#plt.savefig('kuz3_cossim_MM_scatter.jpg', dpi=400)
-plt.clf()
-
-plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
-plt.colorbar()
-plt.xlabel('Position')
-plt.ylabel('Cosine similarity')
-plt.title('Similarity of MM and human classes at each position: %.4f' % (sim,))
-#plt.savefig('kuz3_cossim_MM_heatmap.jpg', dpi=400)
-plt.clf()
-
-cossim_c = cossim_vals
-
-# =============================================================================
-# Visualization d: bat vs. MM
-# =============================================================================
-
-cossim_vals = [cosine_similarity(x_bat_dist[i], x_MM_dist[i]) for i in range(N_POS)]
-
-bad_indices = np.isnan(cossim_vals)
-good_indices = ~bad_indices
-x = np.array(range(N_POS))[good_indices]
-y = np.array(cossim_vals)[good_indices]
-sim = np.mean(y)
-
-plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
-plt.xlabel('Position')
-plt.ylabel('Cosine similarity')
-plt.title('Similarity of bat and MM at each position: %.4f' % (sim,))
-#plt.savefig('kuz3_cossim_batvMM_scatter.jpg', dpi=400)
-plt.clf()
-
-plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
-plt.colorbar()
-plt.xlabel('Position')
-plt.ylabel('Cosine similarity')
-plt.title('Similarity of bat and MM at each position: %.4f' % (sim,))
-#plt.savefig('kuz3_cossim_batvMM_heatmap.jpg', dpi=400)
-plt.clf()
-
-# =============================================================================
-# SARS CoV 2 distribution
-# =============================================================================
-aa = [[] for _ in range(N_POS)]
-
-# Collect instances of amino acid occurrences at each position
-for j in range(len(X_SARS2)):
-    x_encoded = X_SARS2[j]
-    x = decode_from_one_hot(x_encoded, n_positions=N_POS, n_characters=N_CHAR)
-    
-    for i in range(N_POS):
-        character = x[i]
-        if character != -1:
-            aa[i].append(character)
-
-SARS_dist = [[] for _ in range(N_POS)]
-
-# Form true distributions
-for i in range(N_POS):
-    # Get distributions
-    dist = collections.Counter(aa[i])
-    total = sum(dist.values(), 0.0)
-    for key in dist:
-        dist[key] /= total
-   
-    if len(dist) == 0:
-        continue
-    
-    vector = [0] * N_CHAR
-    for j in range(N_CHAR):
-        if j in dist:
-            vector[j] = dist[j]
-
-    SARS_dist[i] = np.array(vector)
-
-# =============================================================================
-# Visualization e: human (training set) vs. SARS CoV 2
-# =============================================================================
-
-cossim_vals = [cosine_similarity(pos_dist[i], SARS_dist[i]) for i in range(N_POS)]
-
-bad_indices = np.isnan(cossim_vals)
-good_indices = ~bad_indices
-x = np.array(range(N_POS))[good_indices]
-y = np.array(cossim_vals)[good_indices]
-sim = np.mean(y)
-
-plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
-plt.xlabel('Position')
-plt.ylabel('Cosine similarity')
-plt.title('Similarity of human and SARS CoV 2 at each position: %.4f' % (sim,))
-#plt.savefig('kuz3_cossim_humanvCoV2_scatter.jpg', dpi=400)
-plt.clf()
-
-plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
-plt.colorbar()
-plt.xlabel('Position')
-plt.ylabel('Cosine similarity')
-plt.title('Similarity of human and SARS CoV 2 at each position: %.4f' % (sim,))
-#plt.savefig('kuz3_cossim_humanvCoV2_heatmap.jpg', dpi=400)
-plt.clf()
-
-# =============================================================================
-# Visualization f: bat vs. SARS CoV 2
-# =============================================================================
-
-cossim_vals = [cosine_similarity(x_bat_dist[i], SARS_dist[i]) for i in range(N_POS)]
-
-bad_indices = np.isnan(cossim_vals)
-good_indices = ~bad_indices
-x = np.array(range(N_POS))[good_indices]
-y = np.array(cossim_vals)[good_indices]
-sim = np.mean(y)
-
-plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
-plt.xlabel('Position')
-plt.ylabel('Cosine similarity')
-plt.title('Similarity of bat and SARS CoV 2 at each position: %.4f' % (sim,))
-#plt.savefig('kuz3_cossim_batvCoV2_scatter.jpg', dpi=400)
-plt.clf()
-
-plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
-plt.colorbar()
-plt.xlabel('Position')
-plt.ylabel('Cosine similarity')
-plt.title('Similarity of bat and SARS CoV 2 at each position: %.4f' % (sim,))
-#plt.savefig('kuz3_cossim_batvCoV2_heatmap.jpg', dpi=400)
-plt.clf()
-
-cossim_f = cossim_vals
-
-# =============================================================================
-# Visualization g: MM vs. SARS CoV 2
-# =============================================================================
-
-cossim_vals = [cosine_similarity(SARS_dist[i], x_MM_dist[i]) for i in range(N_POS)]
-
-bad_indices = np.isnan(cossim_vals)
-good_indices = ~bad_indices
-x = np.array(range(N_POS))[good_indices]
-y = np.array(cossim_vals)[good_indices]
-sim = np.mean(y)
-
-plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
-plt.xlabel('Position')
-plt.ylabel('Cosine similarity')
-plt.title('Similarity of MM and SARS CoV 2 at each position: %.4f' % (sim,))
-#plt.savefig('kuz3_cossim_MMvCoV2_scatter.jpg', dpi=400)
-plt.clf()
-
-plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
-plt.colorbar()
-plt.xlabel('Position')
-plt.ylabel('Cosine similarity')
-plt.title('Similarity of MM and SARS CoV 2 at each position: %.4f' % (sim,))
-#plt.savefig('kuz3_cossim_MMvCoV2_heatmap.jpg', dpi=400)
-plt.clf()
-
-cossim_g = cossim_vals
-# =============================================================================
-# Comparing b (bat vs human) to c (MM vs. human)
-# =============================================================================
-
-# Note np.all(np.isnan(cossim_b) == np.isnan(cossim_c)) is true
-
-bad_indices = np.isnan(cossim_b)
-good_indices = ~bad_indices
-x = np.array(range(N_POS))[good_indices]
-b = np.array(cossim_b)[good_indices]
-c = np.array(cossim_c)[good_indices]
-y = c-b
-avg = np.mean(y) # 0.009397929011614386
-
-plt.scatter(x, y, facecolors='none', edgecolors='r', linewidth=0.5, s=2)
-plt.xlabel('Position')
-plt.ylabel('Difference in cosine similarity')
-plt.title('Comparing similarity of MM to human vs. bat to human (mean: %.3f)' % (avg,))
-plt.ylim(-1.1,1.1)
-plt.savefig('kuz3_cossim_comp1_scatter.jpg', dpi=400)
-plt.clf()
-
-# =============================================================================
-# Comparing f (bat vs human SARS CoV 2) to g (MM vs. human SARS CoV 2)
-# =============================================================================
-
-# Note np.all(np.isnan(cossim_f) == np.isnan(cossim_g)) is true
-
-bad_indices = np.isnan(cossim_f)
-good_indices = ~bad_indices
-x = np.array(range(N_POS))[good_indices]
-f = np.array(cossim_f)[good_indices]
-g = np.array(cossim_g)[good_indices]
-y = g-f
-avg = np.mean(y) # 0.009397929011614386
-
-plt.scatter(x, y, facecolors='none', edgecolors='r', linewidth=0.5, s=2)
-plt.xlabel('Position')
-plt.ylabel('Difference in cosine similarity')
-plt.title('Comparing similarity of MM to CoV 2 vs. bat to CoV 2 (mean: %.3f)' % (avg,))
-plt.ylim(-1.1,1.1)
-plt.savefig('kuz3_cossim_comp2_scatter.jpg', dpi=400)
-plt.clf()
+## =============================================================================
+## Compute MM distribution
+## =============================================================================
+#
+#x = x_MM
+#
+#x_MM_dist = [[] for _ in range(N_POS)]
+#for i in range(N_POS):
+#    aa_index = x[i]
+#    if aa_index == -1:
+#        continue
+#    
+#    vec = np.zeros((N_CHAR,))
+#    vec[aa_index] = 1
+#    
+#    x_MM_dist[i] = vec
+#
+## =============================================================================
+## Visualization c: MM vs. human (in training set)
+## =============================================================================
+#
+#cossim_vals = [cosine_similarity(pos_dist[i], x_MM_dist[i]) for i in range(N_POS)]
+#
+#bad_indices = np.isnan(cossim_vals)
+#good_indices = ~bad_indices
+#x = np.array(range(N_POS))[good_indices]
+#y = np.array(cossim_vals)[good_indices]
+#sim = np.mean(y)
+#
+#plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
+#plt.xlabel('Position')
+#plt.ylabel('Cosine similarity')
+#plt.title('Similarity of MM and human classes at each position: %.4f' % (sim,))
+##plt.savefig('kuz3_cossim_MM_scatter.jpg', dpi=400)
+#plt.clf()
+#
+#plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
+#plt.colorbar()
+#plt.xlabel('Position')
+#plt.ylabel('Cosine similarity')
+#plt.title('Similarity of MM and human classes at each position: %.4f' % (sim,))
+##plt.savefig('kuz3_cossim_MM_heatmap.jpg', dpi=400)
+#plt.clf()
+#
+#cossim_c = cossim_vals
+#
+## =============================================================================
+## Visualization d: bat vs. MM
+## =============================================================================
+#
+#cossim_vals = [cosine_similarity(x_bat_dist[i], x_MM_dist[i]) for i in range(N_POS)]
+#
+#bad_indices = np.isnan(cossim_vals)
+#good_indices = ~bad_indices
+#x = np.array(range(N_POS))[good_indices]
+#y = np.array(cossim_vals)[good_indices]
+#sim = np.mean(y)
+#
+#plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
+#plt.xlabel('Position')
+#plt.ylabel('Cosine similarity')
+#plt.title('Similarity of bat and MM at each position: %.4f' % (sim,))
+##plt.savefig('kuz3_cossim_batvMM_scatter.jpg', dpi=400)
+#plt.clf()
+#
+#plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
+#plt.colorbar()
+#plt.xlabel('Position')
+#plt.ylabel('Cosine similarity')
+#plt.title('Similarity of bat and MM at each position: %.4f' % (sim,))
+##plt.savefig('kuz3_cossim_batvMM_heatmap.jpg', dpi=400)
+#plt.clf()
+#
+## =============================================================================
+## SARS CoV 2 distribution
+## =============================================================================
+#aa = [[] for _ in range(N_POS)]
+#
+## Collect instances of amino acid occurrences at each position
+#for j in range(len(X_SARS2)):
+#    x_encoded = X_SARS2[j]
+#    x = decode_from_one_hot(x_encoded, n_positions=N_POS, n_characters=N_CHAR)
+#    
+#    for i in range(N_POS):
+#        character = x[i]
+#        if character != -1:
+#            aa[i].append(character)
+#
+#SARS_dist = [[] for _ in range(N_POS)]
+#
+## Form true distributions
+#for i in range(N_POS):
+#    # Get distributions
+#    dist = collections.Counter(aa[i])
+#    total = sum(dist.values(), 0.0)
+#    for key in dist:
+#        dist[key] /= total
+#   
+#    if len(dist) == 0:
+#        continue
+#    
+#    vector = [0] * N_CHAR
+#    for j in range(N_CHAR):
+#        if j in dist:
+#            vector[j] = dist[j]
+#
+#    SARS_dist[i] = np.array(vector)
+#
+## =============================================================================
+## Visualization e: human (training set) vs. SARS CoV 2
+## =============================================================================
+#
+#cossim_vals = [cosine_similarity(pos_dist[i], SARS_dist[i]) for i in range(N_POS)]
+#
+#bad_indices = np.isnan(cossim_vals)
+#good_indices = ~bad_indices
+#x = np.array(range(N_POS))[good_indices]
+#y = np.array(cossim_vals)[good_indices]
+#sim = np.mean(y)
+#
+#plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
+#plt.xlabel('Position')
+#plt.ylabel('Cosine similarity')
+#plt.title('Similarity of human and SARS CoV 2 at each position: %.4f' % (sim,))
+##plt.savefig('kuz3_cossim_humanvCoV2_scatter.jpg', dpi=400)
+#plt.clf()
+#
+#plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
+#plt.colorbar()
+#plt.xlabel('Position')
+#plt.ylabel('Cosine similarity')
+#plt.title('Similarity of human and SARS CoV 2 at each position: %.4f' % (sim,))
+##plt.savefig('kuz3_cossim_humanvCoV2_heatmap.jpg', dpi=400)
+#plt.clf()
+#
+## =============================================================================
+## Visualization f: bat vs. SARS CoV 2
+## =============================================================================
+#
+#cossim_vals = [cosine_similarity(x_bat_dist[i], SARS_dist[i]) for i in range(N_POS)]
+#
+#bad_indices = np.isnan(cossim_vals)
+#good_indices = ~bad_indices
+#x = np.array(range(N_POS))[good_indices]
+#y = np.array(cossim_vals)[good_indices]
+#sim = np.mean(y)
+#
+#plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
+#plt.xlabel('Position')
+#plt.ylabel('Cosine similarity')
+#plt.title('Similarity of bat and SARS CoV 2 at each position: %.4f' % (sim,))
+##plt.savefig('kuz3_cossim_batvCoV2_scatter.jpg', dpi=400)
+#plt.clf()
+#
+#plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
+#plt.colorbar()
+#plt.xlabel('Position')
+#plt.ylabel('Cosine similarity')
+#plt.title('Similarity of bat and SARS CoV 2 at each position: %.4f' % (sim,))
+##plt.savefig('kuz3_cossim_batvCoV2_heatmap.jpg', dpi=400)
+#plt.clf()
+#
+#cossim_f = cossim_vals
+#
+## =============================================================================
+## Visualization g: MM vs. SARS CoV 2
+## =============================================================================
+#
+#cossim_vals = [cosine_similarity(SARS_dist[i], x_MM_dist[i]) for i in range(N_POS)]
+#
+#bad_indices = np.isnan(cossim_vals)
+#good_indices = ~bad_indices
+#x = np.array(range(N_POS))[good_indices]
+#y = np.array(cossim_vals)[good_indices]
+#sim = np.mean(y)
+#
+#plt.scatter(x, y, facecolors='none', edgecolors='b', linewidth=0.5, s=2)
+#plt.xlabel('Position')
+#plt.ylabel('Cosine similarity')
+#plt.title('Similarity of MM and SARS CoV 2 at each position: %.4f' % (sim,))
+##plt.savefig('kuz3_cossim_MMvCoV2_scatter.jpg', dpi=400)
+#plt.clf()
+#
+#plt.hist2d(x, y, (25,25), cmap=plt.cm.jet)
+#plt.colorbar()
+#plt.xlabel('Position')
+#plt.ylabel('Cosine similarity')
+#plt.title('Similarity of MM and SARS CoV 2 at each position: %.4f' % (sim,))
+##plt.savefig('kuz3_cossim_MMvCoV2_heatmap.jpg', dpi=400)
+#plt.clf()
+#
+#cossim_g = cossim_vals
+## =============================================================================
+## Comparing b (bat vs human) to c (MM vs. human)
+## =============================================================================
+#
+## Note np.all(np.isnan(cossim_b) == np.isnan(cossim_c)) is true
+#
+#bad_indices = np.isnan(cossim_b)
+#good_indices = ~bad_indices
+#x = np.array(range(N_POS))[good_indices]
+#b = np.array(cossim_b)[good_indices]
+#c = np.array(cossim_c)[good_indices]
+#y = c-b
+#avg = np.mean(y) # 0.009397929011614386
+#
+#plt.scatter(x, y, facecolors='none', edgecolors='r', linewidth=0.5, s=2)
+#plt.xlabel('Position')
+#plt.ylabel('Difference in cosine similarity')
+#plt.title('Comparing similarity of MM to human vs. bat to human (mean: %.3f)' % (avg,))
+#plt.ylim(-1.1,1.1)
+#plt.savefig('kuz3_cossim_comp1_scatter.jpg', dpi=400)
+#plt.clf()
+#
+## =============================================================================
+## Comparing f (bat vs human SARS CoV 2) to g (MM vs. human SARS CoV 2)
+## =============================================================================
+#
+## Note np.all(np.isnan(cossim_f) == np.isnan(cossim_g)) is true
+#
+#bad_indices = np.isnan(cossim_f)
+#good_indices = ~bad_indices
+#x = np.array(range(N_POS))[good_indices]
+#f = np.array(cossim_f)[good_indices]
+#g = np.array(cossim_g)[good_indices]
+#y = g-f
+#avg = np.mean(y) # 0.009397929011614386
+#
+#plt.scatter(x, y, facecolors='none', edgecolors='r', linewidth=0.5, s=2)
+#plt.xlabel('Position')
+#plt.ylabel('Difference in cosine similarity')
+#plt.title('Comparing similarity of MM to CoV 2 vs. bat to CoV 2 (mean: %.3f)' % (avg,))
+#plt.ylim(-1.1,1.1)
+#plt.savefig('kuz3_cossim_comp2_scatter.jpg', dpi=400)
+#plt.clf()
 
 
 
