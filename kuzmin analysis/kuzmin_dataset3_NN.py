@@ -217,6 +217,9 @@ def score_pairwise(seq1, seq2, matrix=MatrixInfo.blosum62, gap_s=-2, gap_e=-1):
     gap = False
     for i in range(len(seq1)):
         pair = (seq1[i], seq2[i])
+        if pair == ('-', '-'):  # Ignore two aligned gaps
+            continue
+        
         if not gap:
             if '-' in pair:
                 gap = True
