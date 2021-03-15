@@ -341,6 +341,74 @@ for i in range(len(training_sequences)):
 
 np.savetxt('training_set_sims.csv', output, fmt='%s')
 
+
+# =============================================================================
+# MDS visualization
+# =============================================================================
+num_seqs = len(X_train_original)
+
+#D = np.zeros((num_seqs+1, num_seqs+1))
+#
+## Compute pairwise similarities between training data
+#print("Computing pairwise distances...")
+#for i in range(num_seqs):
+#    print("%i of %i" % (i, num_seqs))
+#    x_i = X_train_original[i]
+#    for j in range(i+1, num_seqs):
+#        x_j= X_train_original[j]
+#        sim = sim_score(x_i, x_j, N_POS=2396, N_CHAR=25)
+#        D[i,j] = sim
+#        D[j,i] = sim
+##np.savetxt('train_distances_last_col_zeros.csv', D)
+#
+## Compute pairwise sim of bat and MM bat
+#bat_to_MM_sim = sim_score(x_bat, x_MM, N_POS=2396, N_CHAR=25)
+#
+## Add col and row for bat
+#similarities.append(0) # Add a zero to the end of the column
+#D[:, -1] = similarities # Add last column and row for bat
+#D[-1, :] = similarities
+#
+## Add col for MM bat
+#MM_similarities = MM_similarities[:-1]
+#MM_similarities.append(bat_to_MM_sim)
+#MM_similarities = np.array(MM_similarities).reshape((-1,1))
+#D = np.append(D, MM_similarities, axis = 1)
+#
+## add row for MM bat
+#MM_similarities = np.transpose(MM_similarities)
+#MM_similarities = np.append(MM_similarities, 0).reshape((1,-1))
+#D = np.append(D, MM_similarities, axis = 0)
+#
+#np.savetxt('train_distances.csv', D)
+D = np.loadtxt('train_distances.csv')
+
+# Filter out non-humans
+index_list = []
+for i in range(num_seqs):
+    entry = training_sequences[i]
+    if entry.host_species != 'Human':
+        index_list.append(i)
+    
+D = np.delete(D, index_list, 0)
+D = np.delete(D, index_list, 1)
+
+# Set up MDS
+from sklearn.manifold import MDS
+embedding = MDS(n_components=2, dissimilarity='precomputed')
+X_train_2d = embedding.fit_transform(D)
+
+# Scatter plot
+import matplotlib.pyplot as plt 
+plt.scatter(X_train_2d[:-2,0], X_train_2d[:-2,1], s=40, facecolors='none', edgecolors='grey', label="human")
+plt.scatter(X_train_2d[-2,0], X_train_2d[-2,1], s=40, facecolors='none', edgecolors='b', label="bat") # bat
+plt.scatter(X_train_2d[-1,0], X_train_2d[-1,1], s=40, facecolors='none', edgecolors='r', label="MM bat") # MM bat
+plt.legend()
+plt.title("MDS representation of training sequences")
+plt.show()
+plt.savefig('mds_bat_to_MM_bat.jpg', dpi=400)
+
+
 # =============================================================================
 # Compute similarity wrt human SARS CoV 2 before and after MM
 # =============================================================================
