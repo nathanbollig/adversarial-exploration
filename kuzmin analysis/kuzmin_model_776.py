@@ -126,7 +126,7 @@ import numpy as np
 training_sequences = sequences
 
 # =============================================================================
-# Form and split data set
+# Form and split data set into single fold
 # =============================================================================
 N_POS = 2396
 N_CHAR = 25
@@ -169,7 +169,7 @@ classifiers = {"SVM": SVC(probability = True, gamma = 'scale', random_state = 42
                                                          n_jobs= -1, random_state = 42)}
 
 
-def classify(model_name):
+def classify(model_name, X_train, y_train, X_test):
     model = classifiers[model_name]
     model.fit(X_train, y_train)
     y_proba = model.predict_proba(X_test)
@@ -188,6 +188,9 @@ from sklearn.metrics import average_precision_score
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score
 
 def evaluate(y_proba, y_test, y_proba_train, y_train, model_name=""):
     # PR curve
@@ -213,18 +216,73 @@ def evaluate(y_proba, y_test, y_proba_train, y_train, model_name=""):
     # Evaluate on train set
     train_accuracy = accuracy_score(y_train, (y_proba_train >= 0.5).astype(int))
     print(model_name + ' Train Accuracy: %.2f' % (train_accuracy*100))
+    train_recall = recall_score(y_train, (y_proba_train >= 0.5).astype(int))
+    print(model_name + ' Train Recall: %.2f' % (train_recall*100))
+    train_precision = precision_score(y_train, (y_proba_train >= 0.5).astype(int))
+    print(model_name + ' Train Precision: %.2f' % (train_precision*100))
+    train_f1 = f1_score(y_train, (y_proba_train >= 0.5).astype(int))
+    print(model_name + ' Train F1: %.2f' % (train_f1*100))
     
     # Evaluate on validation set
     test_accuracy = accuracy_score(y_test, (y_proba >= 0.5).astype(int))
     print(model_name + ' Test Accuracy: %.2f' % (test_accuracy*100))
+    test_recall = recall_score(y_test, (y_proba >= 0.5).astype(int))
+    print(model_name + ' Test Recall: %.2f' % (test_recall*100))
+    test_precision = precision_score(y_test, (y_proba >= 0.5).astype(int))
+    print(model_name + ' Test Precision: %.2f' % (test_precision*100))
+    test_f1 = f1_score(y_test, (y_proba >= 0.5).astype(int))
+    print(model_name + ' Test F1: %.2f' % (test_f1*100))
+    
+    return ap, auc, train_accuracy, train_recall, train_precision, train_f1, test_accuracy, test_recall, test_precision, test_f1
+    
 
 # =============================================================================
 # MAIN - Train and evaluate models
 # =============================================================================
 
 for model_name in classifiers:
-    y_proba, y_proba_train = classify(model_name)
+    y_proba, y_proba_train = classify(model_name, X_train, y_train, X_test)
     evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
 
+# =============================================================================
+# MAIN - Cross-validation for models
+# =============================================================================
+from sklearn.utils.fixes import signature
+import pandas as pd
 
+# cross validation
+kfold = GroupKFold(n_splits=3)
+
+Y_proba = []
+Y_targets = []
+output = []
+i=0
+
+for train, test in kfold.split(X, y, species):
+    print("*******************FOLD %i*******************" % (i+1,))
+    print("Test size: %i" % (len(y[test]),))
+    
+    for model_name in classifiers:
+        y_proba, y_proba_train = classify(model_name, X[train], y[train], X[test])
+        results = evaluate(y_proba, y[test], y_proba_train, y[train], model_name)
+        output.append((model_name, i) + results)
+    
+    Y_proba.extend(y_proba)
+    Y_targets.extend(y[test])
+    i += 1
+
+print("*******************SUMMARY*******************")
+
+output_df = pd.DataFrame(output, columns=['Model Name', 'Fold', 'ap', 'auc', 'train_accuracy', 'train_recall', 'train_precision', 'train_f1', 'test_accuracy', 'test_recall', 'test_precision', 'test_f1'])
+output_df.to_csv('cross_validation_results.csv')
+
+# Pooled PR curve
+precision, recall, _ = precision_recall_curve(Y_targets, Y_proba)
+
+plt.step(recall, precision, color='k', linestyle ='-', where='post')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.ylim([0.0, 1.05])
+plt.xlim([0.0, 1.0])
+plt.savefig("pooledPR.jpg")
 
