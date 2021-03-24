@@ -125,6 +125,62 @@ import numpy as np
 
 training_sequences = sequences
 
+
+# =============================================================================
+# Analysis to get split point for embedding representation of sequence fragments
+# =============================================================================
+
+"""
+from anotation of N25|ABD75545|Human|Human_coronavirus_HKU1 on Benchling, we
+see that the Coronavirus S2 region starts at index 1518 of the multiple alignment.
+We will convert each sequence in the multiple alignment back to an unaligned
+sequence by removing gaps, and for each sequence, store the index of the start
+of the S2 region.
+
+Then we split each sequence at the appropriate index and create a fasta file
+with each original sequence split into two sequences. The deflines have an additional
+field indicating whether the sequence is up to (and not including) the S2 domain
+or is the S2 domain only. 
+
+This file is saved as "split_seqs.faa".
+"""
+
+#def reformat_seq(string, i=1518):
+#    """
+#    Takes a string and an index i. Returns the string without gap character '-'
+#    and the index in the resulting string corresponding to the index i in the
+#    original string.
+#    """
+#    
+#    # Advance index to first non-gap character
+#    while string[i] == '-':
+#        i += 1
+#    
+#    # Count gap characters before i
+#    offset = string[:i].count('-')
+#    
+#    # Remove gap chars
+#    string = string.replace('-','')
+#    
+#    return string, i-offset
+#
+#from Bio.Seq import Seq
+#from Bio.SeqRecord import SeqRecord
+#
+#records = []
+#for seq in sequences:
+#    seq_string = str(seq.sequence)
+#    seq_string, i = reformat_seq(seq_string)
+#    seq1 = seq_string[:i]
+#    seq2 = seq_string[i:]
+#    defline = seq.defline
+#    rec1 = SeqRecord(Seq(seq1), id=defline+"|without S2")
+#    rec2 = SeqRecord(Seq(seq2), id=defline+"|S2 only")
+#    records.append(rec1)
+#    records.append(rec2)
+#
+#SeqIO.write(records, "split_seqs.faa", "fasta")
+
 # =============================================================================
 # Form and split data set into single fold
 # =============================================================================
