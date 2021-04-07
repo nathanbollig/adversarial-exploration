@@ -182,7 +182,7 @@ This file is saved as "split_seqs.faa".
 #SeqIO.write(records, "split_seqs.faa", "fasta")
 
 # =============================================================================
-# Form and split data set into single fold
+# Get data for raw sequence data
 # =============================================================================
 N_POS = 2396
 N_CHAR = 25
@@ -190,20 +190,184 @@ N_CHAR = 25
 X, y, species = EncodeAndTarget(training_sequences)
 X = np.array(X).reshape((-1, N_POS * N_CHAR))
 y = np.array(y)
+species = np.array(species)
+
+# =============================================================================
+# Get data for embeddings from file (produced externally)
+# =============================================================================
+import pickle
+with open('embeddings.pkl', 'rb') as f:
+    data = pickle.load(f)
+
+# Goal is to create a dictionary of embeddings where keys are the first 4 fields of the defline
+# and value is list [embedding array, label]
+embeddings = {}
+
+for header, emb in data.items():
+    parsed_header = tuple(header.split('|'))
+
+    # Get key from header
+    key = parsed_header[:-1]
+    
+    # Get label
+    if parsed_header[3].replace('-','_') in human_virus_species_set:
+        label = 1
+    else:
+        label = 0    
+    
+    # Boolean flag for whether the embedding is for chunk 1 (or chunk 2) of sequence
+    if parsed_header[-1].startswith('without S2'):
+        part1 = True
+    else:
+        part1 = False
+
+    # Load embedding into embeddings dictionary based on key
+    if key in embeddings:
+        embeddings[key][0] = np.concatenate((embeddings[key][0], emb))
+    else:
+        embeddings[key] = [emb, label]
+
+# Transform to lists
+X_emb = []
+y_emb = []
+species_emb = []
+deflines = []
+
+for key,val in embeddings.items():
+    x = val[0]
+    label = val[1]
+    sp = key[3]
+    X_emb.append(x)
+    y_emb.append(label)
+    species_emb.append(sp) 
+    deflines.append(key)
+
+X_emb = np.array(X_emb).reshape((-1, 2560))
+y_emb = np.array(y_emb)
+
+# =============================================================================
+# Align data in X and X_emb
+# =============================================================================
+
+# We have data in X,y and in X_emb,y_emb. We will sort X_emb and y_emb so that
+# the data is in the same order as X,y
+
+def match_deflines(defline, emb_defline):
+    """
+    Return true if the deflines match. Handles formatting differences that emerged during this workflow.
+
+        defline: defline from the original fasta_sequence object
+        emb_defline: defline tuple extracted from the embedding file names
+    """
+    d = defline.split('|')
+    e = emb_defline
+    
+    for i in range(4):
+        if d[i].replace('/', '-').replace('_', '-') != e[i]:
+            return False
+    
+    return True
+
+assert(X.shape[0] == X_emb.shape[0])
+N = X.shape[0]
+
+for i in range(N):
+    found = False
+    X_defline = training_sequences[i].defline
+    for j in range(i,N):
+        if match_deflines(X_defline, deflines[j]) == True:
+            found = True
+            # cache items at i
+            x = X_emb[i]
+            label = y_emb[i]
+            sp = species_emb[i]
+            d = deflines[i]
+            # replace at i with items at j
+            X_emb[i] = X_emb[j]
+            y_emb[i] = y_emb[j]
+            species_emb[i] = species_emb[j]
+            deflines[i] = deflines[j]
+            # replace j with cached items from i
+            X_emb[j] = x
+            y_emb[j] = label
+            species_emb[j] = sp
+            deflines[j] = d
+    assert(found == True)
+    
+
+# Tests
+assert(np.all(y == y_emb))
+
+for i in range(len(species)):
+    if species[i].replace('/', '-').replace('_', '-') != species_emb[i]:
+        assert(1==0)
+
+"""
+We now have the following aligned arrays:
+    X - flattened one-hot sequence encodings
+    X_emb - transformer embeddings
+    y - labels
+    species - species infected
+    deflines
+    training_sequences
+    
+"""
+
+# =============================================================================
+# Compute index sets
+# =============================================================================
+"""
+We want to get index sets for all 7 human-infecting species. 
+"""
+human_virus_species_list = list(human_virus_species_set)
+
+# Set up dictionary such that sp[index of species in human_virus_species_list]
+# is a list of the indices in X and X_emb of that species. In addition, the value
+# of sp['non-human'] is a list of indices for non-human-infecting viruses.
+sp = {}
+for i in range(len(human_virus_species_list)):
+    sp[i] = []
+sp['non-human'] = []
+
+# Populate the dictionary
+for i in range(len(species)):
+    if species[i] in human_virus_species_list:
+        species_idx = human_virus_species_list.index(species[i])
+        sp[species_idx].append(i)
+    else:
+        sp['non-human'].append(i)
 
 
-## Standard split as in Kuzmin paper
-#from sklearn.model_selection import train_test_split
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+# Tests
+n = 0
+for i in range(len(human_virus_species_list)):
+    n += len(sp[i])
+assert(n == np.sum(y))
+assert(len(sp['non-human']) == (len(y) - n))
+assert(np.sum(y[sp['non-human']]) == 0)
+for i in range(len(human_virus_species_list)):
+    assert(np.all(y[sp[i]]==1)==True)
 
+"""
+We now have human_virus_species_list and sp dictionary as defined above.
+"""
 
-# Split and ensure same species doesn't appear in train and test
-from sklearn.model_selection import GroupKFold
-group_kfold = GroupKFold(n_splits=2)
-
-for train_index, test_index in group_kfold.split(X, y, species):
-    X_train, X_test = X[train_index], X[test_index]
-    y_train, y_test = y[train_index], y[test_index]
+## =============================================================================
+## Single Split Approach
+## =============================================================================
+#
+### Standard split as in Kuzmin paper
+##from sklearn.model_selection import train_test_split
+##X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+#
+#
+## Split and ensure same species doesn't appear in train and test
+#from sklearn.model_selection import GroupKFold
+#group_kfold = GroupKFold(n_splits=2)
+#
+#for train_index, test_index in group_kfold.split(X, y, species):
+#    X_train, X_test = X[train_index], X[test_index]
+#    y_train, y_test = y[train_index], y[test_index]
 
 
 # =============================================================================
@@ -214,6 +378,7 @@ from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.dummy import DummyClassifier
 
 
 classifiers = {"SVM": SVC(probability = True, gamma = 'scale', random_state = 42), 
@@ -222,7 +387,8 @@ classifiers = {"SVM": SVC(probability = True, gamma = 'scale', random_state = 42
                                                            n_jobs = -1, random_state = 42),
                  "Decision Tree": DecisionTreeClassifier(random_state = 42),
                  "Random Forest": RandomForestClassifier(n_estimators = 500, max_leaf_nodes = 15, 
-                                                         n_jobs= -1, random_state = 42)}
+                                                         n_jobs= -1, random_state = 42),
+                 "ZeroR": DummyClassifier(strategy='constant', constant=1)}
 
 
 def classify(model_name, X_train, y_train, X_test):
@@ -235,7 +401,7 @@ def classify(model_name, X_train, y_train, X_test):
     return y_proba, y_proba_train
 
 # =============================================================================
-# Evaluation code
+# Standard evaluation code
 # =============================================================================
 
 import matplotlib.pyplot as plt
@@ -291,54 +457,89 @@ def evaluate(y_proba, y_test, y_proba_train, y_train, model_name=""):
     
     return ap, auc, train_accuracy, train_recall, train_precision, train_f1, test_accuracy, test_recall, test_precision, test_f1
     
+## =============================================================================
+## MAIN - Train and evaluate models
+## =============================================================================
+#
+#for model_name in classifiers:
+#    y_proba, y_proba_train = classify(model_name, X_train, y_train, X_test)
+#    evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
 
 # =============================================================================
-# MAIN - Train and evaluate models
+# MAIN - Cross-validation with species-aware splitting
 # =============================================================================
-
-for model_name in classifiers:
-    y_proba, y_proba_train = classify(model_name, X_train, y_train, X_test)
-    evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
-
-# =============================================================================
-# MAIN - Cross-validation for models
-# =============================================================================
-from sklearn.utils.fixes import signature
 import pandas as pd
+from sklearn.utils import shuffle
+from sklearn.model_selection import GroupKFold
 
-# cross validation
-kfold = GroupKFold(n_splits=3)
+kfold = GroupKFold(n_splits=7)
 
 Y_proba = []
 Y_targets = []
 output = []
 i=0
 
-for train, test in kfold.split(X, y, species):
-    print("*******************FOLD %i*******************" % (i+1,))
-    print("Test size: %i" % (len(y[test]),))
+## Collect data for testing
+#X_TRAIN = []
+#X_TEST = []
+#Y_TRAIN = []
+#Y_TEST = []
+
+
+for train, test in kfold.split(X[sp['non-human']], y[sp['non-human']], species[sp['non-human']]): # start by splitting only non-human data
+    # Put the ith human-infecting virus species into the test set, the rest into train
+    # Get indices of training species
+    training_species = [k for k in [0,1,2,3,4,5,6] if k != i]
+    training_species_idx = []
+    for j in training_species:
+        training_species_idx.extend(sp[j])
+    
+    # Create train and test arrays by concatenation
+    X_train = np.vstack((X[sp['non-human']][train], X[training_species_idx]))
+    X_test = np.vstack((X[sp['non-human']][test], X[sp[i]]))
+    y_train = np.concatenate((y[sp['non-human']][train], y[training_species_idx]))
+    y_test = np.concatenate((y[sp['non-human']][test], y[sp[i]]))
+    
+    # Shuffle arrays
+    X_train, y_train = shuffle(X_train, y_train)
+    X_test, y_test = shuffle(X_test, y_test)
+    
+#    # Store data for testing
+#    X_TRAIN.append(X_train)
+#    X_TEST.append(X_test)
+#    Y_TRAIN.append(y_train)
+#    Y_TEST.append(y_test)
+    
+    print("*******************FOLD %i: %s*******************" % (i, human_virus_species_list[i]))
+    print("Test size: %i" % (len(y_test),))
+    print("Test pos class prevalence: %.3f" % (np.mean(y_test),))
     
     for model_name in classifiers:
-        y_proba, y_proba_train = classify(model_name, X[train], y[train], X[test])
-        results = evaluate(y_proba, y[test], y_proba_train, y[train], model_name)
+        y_proba, y_proba_train = classify(model_name, X_train, y_train, X_test)
+        results = evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
         output.append((model_name, i) + results)
     
     Y_proba.extend(y_proba)
-    Y_targets.extend(y[test])
+    Y_targets.extend(y_test)
     i += 1
+
+# TODO: need to save Y_proba for each classifier, make a pooled PR curve for each one
 
 print("*******************SUMMARY*******************")
 
 output_df = pd.DataFrame(output, columns=['Model Name', 'Fold', 'ap', 'auc', 'train_accuracy', 'train_recall', 'train_precision', 'train_f1', 'test_accuracy', 'test_recall', 'test_precision', 'test_f1'])
-output_df.to_csv('cross_validation_results.csv')
+output_df.to_csv('cv_group_7_fold.csv')
 
 # Pooled PR curve
 precision, recall, _ = precision_recall_curve(Y_targets, Y_proba)
+ap = average_precision_score(Y_targets, Y_proba)
+ap_baseline = average_precision_score(Y_targets, np.ones(len(Y_targets)))
 
 plt.step(recall, precision, color='k', linestyle ='-', where='post')
 plt.xlabel('Recall')
 plt.ylabel('Precision')
+plt.title('AP=%.3f; baseline AP=%.3f)' % (ap,ap_baseline))
 plt.ylim([0.0, 1.05])
 plt.xlim([0.0, 1.0])
-plt.savefig("pooledPR.jpg")
+plt.savefig("pooledPR_7_fold.jpg")
 
