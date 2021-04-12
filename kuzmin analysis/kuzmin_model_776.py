@@ -414,46 +414,48 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
 
-def evaluate(y_proba, y_test, y_proba_train, y_train, model_name=""):
+def evaluate(y_proba, y_test, y_proba_train, y_train, model_name="", verbose=False):
     # PR curve
     precision, recall, thresholds = precision_recall_curve(y_test, y_proba)
     ap = average_precision_score(y_test, y_proba)
-    fig, ax = plt.subplots()
-    ax.plot(recall, precision)
-    ax.set(xlabel='Recall', ylabel='Precision', title=model_name + ' (AP=%.3f)' % (ap,))
-    ax.grid()
-    #fig.savefig(model_name+"_pr_curve.jpg", dpi=500)
-    plt.show()
+#    fig, ax = plt.subplots()
+#    ax.plot(recall, precision)
+#    ax.set(xlabel='Recall', ylabel='Precision', title=model_name + ' (AP=%.3f)' % (ap,))
+#    ax.grid()
+#    #fig.savefig(model_name+"_pr_curve.jpg", dpi=500)
+#    plt.show()
     
     # ROC curve
     fpr, tpr, thresholds = roc_curve(y_test, y_proba)
     auc = roc_auc_score(y_test, y_proba)
-    fig, ax = plt.subplots()
-    ax.plot(fpr, tpr)
-    ax.set(xlabel='False positive rate', ylabel='True positive rate', title=model_name + ' (AUC=%.3f)' % (auc,))
-    ax.grid()
-    #fig.savefig(model_name + "_roc_curve.jpg", dpi=500)
-    plt.show()
+#    fig, ax = plt.subplots()
+#    ax.plot(fpr, tpr)
+#    ax.set(xlabel='False positive rate', ylabel='True positive rate', title=model_name + ' (AUC=%.3f)' % (auc,))
+#    ax.grid()
+#    #fig.savefig(model_name + "_roc_curve.jpg", dpi=500)
+#    plt.show()
     
     # Evaluate on train set
     train_accuracy = accuracy_score(y_train, (y_proba_train >= 0.5).astype(int))
-    print(model_name + ' Train Accuracy: %.2f' % (train_accuracy*100))
     train_recall = recall_score(y_train, (y_proba_train >= 0.5).astype(int))
-    print(model_name + ' Train Recall: %.2f' % (train_recall*100))
     train_precision = precision_score(y_train, (y_proba_train >= 0.5).astype(int))
-    print(model_name + ' Train Precision: %.2f' % (train_precision*100))
     train_f1 = f1_score(y_train, (y_proba_train >= 0.5).astype(int))
-    print(model_name + ' Train F1: %.2f' % (train_f1*100))
     
     # Evaluate on validation set
     test_accuracy = accuracy_score(y_test, (y_proba >= 0.5).astype(int))
-    print(model_name + ' Test Accuracy: %.2f' % (test_accuracy*100))
     test_recall = recall_score(y_test, (y_proba >= 0.5).astype(int))
-    print(model_name + ' Test Recall: %.2f' % (test_recall*100))
     test_precision = precision_score(y_test, (y_proba >= 0.5).astype(int))
-    print(model_name + ' Test Precision: %.2f' % (test_precision*100))
     test_f1 = f1_score(y_test, (y_proba >= 0.5).astype(int))
-    print(model_name + ' Test F1: %.2f' % (test_f1*100))
+    
+    if verbose == True:
+        print(model_name + ' Train Accuracy: %.2f' % (train_accuracy*100))
+        print(model_name + ' Train Recall: %.2f' % (train_recall*100))
+        print(model_name + ' Train Precision: %.2f' % (train_precision*100))
+        print(model_name + ' Train F1: %.2f' % (train_f1*100))
+        print(model_name + ' Test Accuracy: %.2f' % (test_accuracy*100))
+        print(model_name + ' Test Recall: %.2f' % (test_recall*100))
+        print(model_name + ' Test Precision: %.2f' % (test_precision*100))
+        print(model_name + ' Test F1: %.2f' % (test_f1*100))
     
     return ap, auc, train_accuracy, train_recall, train_precision, train_f1, test_accuracy, test_recall, test_precision, test_f1
     
@@ -474,10 +476,15 @@ from sklearn.model_selection import GroupKFold
 
 kfold = GroupKFold(n_splits=7)
 
-Y_proba = []
 Y_targets = []
 output = []
 i=0
+Y_proba = {}
+Y_proba_emb = {}
+for model_name in classifiers:
+    Y_proba[model_name] = []
+    Y_proba_emb[model_name] = []
+
 
 ## Collect data for testing
 #X_TRAIN = []
@@ -497,12 +504,14 @@ for train, test in kfold.split(X[sp['non-human']], y[sp['non-human']], species[s
     # Create train and test arrays by concatenation
     X_train = np.vstack((X[sp['non-human']][train], X[training_species_idx]))
     X_test = np.vstack((X[sp['non-human']][test], X[sp[i]]))
+    X_emb_train = np.vstack((X_emb[sp['non-human']][train], X_emb[training_species_idx]))
+    X_emb_test = np.vstack((X_emb[sp['non-human']][test], X_emb[sp[i]]))
     y_train = np.concatenate((y[sp['non-human']][train], y[training_species_idx]))
     y_test = np.concatenate((y[sp['non-human']][test], y[sp[i]]))
     
     # Shuffle arrays
-    X_train, y_train = shuffle(X_train, y_train)
-    X_test, y_test = shuffle(X_test, y_test)
+    X_train, X_emb_train, y_train = shuffle(X_train, X_emb_train, y_train)
+    X_test, X_emb_test, y_test = shuffle(X_test, X_emb_test, y_test)
     
 #    # Store data for testing
 #    X_TRAIN.append(X_train)
@@ -511,35 +520,153 @@ for train, test in kfold.split(X[sp['non-human']], y[sp['non-human']], species[s
 #    Y_TEST.append(y_test)
     
     print("*******************FOLD %i: %s*******************" % (i, human_virus_species_list[i]))
-    print("Test size: %i" % (len(y_test),))
+    print("Test size = %i" % (len(y_test),))
+    print("Test non-human size = %i" % (len(X[sp['non-human']][test])),)
+    print("Test human size = %i" % (len(X[sp[i]]),))
     print("Test pos class prevalence: %.3f" % (np.mean(y_test),))
     
+    
     for model_name in classifiers:
+        print("Training %s..." % (model_name,))
+        
+        # Raw sequence representation
         y_proba, y_proba_train = classify(model_name, X_train, y_train, X_test)
         results = evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
-        output.append((model_name, i) + results)
+        output.append((model_name, i, 'raw seq') + results)
+        Y_proba[model_name].extend(y_proba)
     
-    Y_proba.extend(y_proba)
+        # Embedding representation
+        y_proba, y_proba_train = classify(model_name, X_emb_train, y_train, X_emb_test)
+        results = evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
+        output.append((model_name, i, 'emb') + results)
+        Y_proba_emb[model_name].extend(y_proba)
+    
     Y_targets.extend(y_test)
     i += 1
 
-# TODO: need to save Y_proba for each classifier, make a pooled PR curve for each one
+print("*******************SUMMARY*******************")
+
+output_df = pd.DataFrame(output, columns=['Model Name', 'Fold', 'Features', 'ap', 'auc', 'train_accuracy', 'train_recall', 'train_precision', 'train_f1', 'test_accuracy', 'test_recall', 'test_precision', 'test_f1'])
+output_df.to_csv('cv_group_7_fold.csv')
+
+# Pooled PR curves
+ap_baseline = average_precision_score(Y_targets, np.ones(len(Y_targets)))
+
+def get_PR(Y_targets, Y_proba):
+    precision, recall, _ = precision_recall_curve(Y_targets, Y_proba)
+    ap = average_precision_score(Y_targets, Y_proba)
+    return precision, recall, ap
+
+
+for key in Y_proba.keys(): # Loop over model types
+    # Raw sequence
+    precision, recall, ap = get_PR(Y_targets, Y_proba[key])
+    plt.step(recall, precision, where='post', label = key + ' - Raw Seq (AP=%.2f)' % (ap,) )
+    # Embedding
+    precision, recall, ap = get_PR(Y_targets, Y_proba_emb[key])
+    plt.step(recall, precision, where='post', label = key + ' - Emb (AP=%.2f)' % (ap,) )
+    
+# Generate figure
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
+plt.legend(loc='upper right', fontsize=7)
+plt.savefig("pooledPR_7_fold.jpg", dpi=400)
+plt.clf()
+
+# =============================================================================
+# MAIN - CV with standard splitting
+# =============================================================================
+print("Now doing standard splitting...")
+
+from sklearn.model_selection import KFold
+
+kfold = KFold(n_splits=7)
+
+Y_targets = []
+output = []
+i=0
+Y_proba = {}
+Y_proba_emb = {}
+for model_name in classifiers:
+    Y_proba[model_name] = []
+    Y_proba_emb[model_name] = []
+
+
+## Collect data for testing
+#X_TRAIN = []
+#X_TEST = []
+#Y_TRAIN = []
+#Y_TEST = []
+
+
+for train, test in kfold.split(X, y, species): # start by splitting only non-human data    
+    # Create train and test arrays by concatenation
+    X_train = X[train]
+    X_test = X[test]
+    X_emb_train = X_emb[train]
+    X_emb_test = X_emb[test]
+    y_train = y[train]
+    y_test = y_test
+    
+    # Shuffle arrays
+    X_train, X_emb_train, y_train = shuffle(X_train, X_emb_train, y_train)
+    X_test, X_emb_test, y_test = shuffle(X_test, X_emb_test, y_test)
+    
+#    # Store data for testing
+#    X_TRAIN.append(X_train)
+#    X_TEST.append(X_test)
+#    Y_TRAIN.append(y_train)
+#    Y_TEST.append(y_test)
+    
+    print("*******************FOLD %i: %s*******************" % (i, human_virus_species_list[i]))
+    print("Test size = %i" % (len(y_test),))
+    print("Test non-human size = %i" % (len(X[sp['non-human']][test])),)
+    print("Test human size = %i" % (len(X[sp[i]]),))
+    print("Test pos class prevalence: %.3f" % (np.mean(y_test),))
+    
+    
+    for model_name in classifiers:
+        # Raw sequence representation
+        y_proba, y_proba_train = classify(model_name, X_train, y_train, X_test)
+        results = evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
+        output.append((model_name, i, 'raw seq') + results)
+        Y_proba[model_name].extend(y_proba)
+    
+        # Embedding representation
+        y_proba, y_proba_train = classify(model_name, X_emb_train, y_train, X_emb_test)
+        results = evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
+        output.append((model_name, i, 'emb') + results)
+        Y_proba_emb[model_name].extend(y_proba)
+    
+    Y_targets.extend(y_test)
+    i += 1
 
 print("*******************SUMMARY*******************")
 
-output_df = pd.DataFrame(output, columns=['Model Name', 'Fold', 'ap', 'auc', 'train_accuracy', 'train_recall', 'train_precision', 'train_f1', 'test_accuracy', 'test_recall', 'test_precision', 'test_f1'])
-output_df.to_csv('cv_group_7_fold.csv')
+output_df = pd.DataFrame(output, columns=['Model Name', 'Fold', 'Features', 'ap', 'auc', 'train_accuracy', 'train_recall', 'train_precision', 'train_f1', 'test_accuracy', 'test_recall', 'test_precision', 'test_f1'])
+output_df.to_csv('cv_bad_split_7_fold.csv')
 
-# Pooled PR curve
-precision, recall, _ = precision_recall_curve(Y_targets, Y_proba)
-ap = average_precision_score(Y_targets, Y_proba)
+# Pooled PR curves
 ap_baseline = average_precision_score(Y_targets, np.ones(len(Y_targets)))
 
-plt.step(recall, precision, color='k', linestyle ='-', where='post')
+def get_PR(Y_targets, Y_proba):
+    precision, recall, _ = precision_recall_curve(Y_targets, Y_proba)
+    ap = average_precision_score(Y_targets, Y_proba)
+    return precision, recall, ap
+
+
+for key in Y_proba.keys(): # Loop over model types
+    # Raw sequence
+    precision, recall, ap = get_PR(Y_targets, Y_proba[key])
+    plt.step(recall, precision, where='post', label = key + ' - Raw Seq (AP=%.2f)' % (ap,) )
+    # Embedding
+    precision, recall, ap = get_PR(Y_targets, Y_proba_emb[key])
+    plt.step(recall, precision, where='post', label = key + ' - Emb (AP=%.2f)' % (ap,) )
+    
+# Generate figure
 plt.xlabel('Recall')
 plt.ylabel('Precision')
-plt.title('AP=%.3f; baseline AP=%.3f)' % (ap,ap_baseline))
-plt.ylim([0.0, 1.05])
-plt.xlim([0.0, 1.0])
-plt.savefig("pooledPR_7_fold.jpg")
-
+plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
+plt.legend(loc='upper right', fontsize=6)
+plt.savefig("pooledPR_bad_split_7_fold.jpg", dpi=400)
