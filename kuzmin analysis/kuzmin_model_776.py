@@ -353,22 +353,33 @@ We now have human_virus_species_list and sp dictionary as defined above.
 """
 
 ## =============================================================================
-## Single Split Approach
+## Single Split Approach - For Testing
 ## =============================================================================
-#
-### Standard split as in Kuzmin paper
-##from sklearn.model_selection import train_test_split
-##X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
-#
-#
-## Split and ensure same species doesn't appear in train and test
-#from sklearn.model_selection import GroupKFold
-#group_kfold = GroupKFold(n_splits=2)
-#
-#for train_index, test_index in group_kfold.split(X, y, species):
-#    X_train, X_test = X[train_index], X[test_index]
-#    y_train, y_test = y[train_index], y[test_index]
 
+# Standard split as in Kuzmin paper
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+
+#from keras.models import Sequential
+#from keras.layers import LSTM
+#from keras.layers import Dense
+#from keras.layers import Bidirectional
+#
+#n = X_train.shape[0]
+#X_train = X_train.reshape((n, N_POS, -1))
+#num_features = X_train.shape[2]
+#
+#model = Sequential()
+#model.add(Bidirectional(LSTM(64), input_shape = (N_POS, num_features)))
+#model.add(Dense(16, activation='relu'))
+#model.add(Dense(1, activation='sigmoid'))
+#model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+#
+## Train model
+#model.fit(X_train, y_train, epochs=10, batch_size=64)
+#
+#_, acc = model.evaluate(X_test.reshape((X_test.shape[0], N_POS, -1)), y_test, verbose=0)
+#print('Test Accuracy: %.2f' % (acc*100))
 
 # =============================================================================
 # Define Kuzmin classifiers
@@ -379,6 +390,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.dummy import DummyClassifier
+from sklearn.base import clone
 
 
 classifiers = {"SVM": SVC(probability = True, gamma = 'scale', random_state = 42), 
@@ -388,16 +400,53 @@ classifiers = {"SVM": SVC(probability = True, gamma = 'scale', random_state = 42
                  "Decision Tree": DecisionTreeClassifier(random_state = 42),
                  "Random Forest": RandomForestClassifier(n_estimators = 500, max_leaf_nodes = 15, 
                                                          n_jobs= -1, random_state = 42),
-                 "ZeroR": DummyClassifier(strategy='constant', constant=1)}
+                 "ZeroR": DummyClassifier(strategy='constant', constant=1),
+                 "LSTM": None}
 
+# =============================================================================
+# Define additional classifiers
+# =============================================================================
+from keras.models import Sequential
+from keras.layers import LSTM
+from keras.layers import Dense
+from keras.layers import Bidirectional
 
-def classify(model_name, X_train, y_train, X_test):
-    model = classifiers[model_name]
-    model.fit(X_train, y_train)
-    y_proba = model.predict_proba(X_test)
-    y_proba = y_proba[:,1]
-    y_proba_train = model.predict_proba(X_train)
-    y_proba_train = y_proba_train[:,1]
+def make_LSTM(X_train, y_train, N_POS):   
+    n = X_train.shape[0]
+    X_train = X_train.reshape((n, N_POS, -1))
+    num_features = X_train.shape[2]
+    
+    model = Sequential()
+    model.add(Bidirectional(LSTM(64), input_shape = (N_POS, num_features)))
+    model.add(Dense(16, activation='relu'))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+    return model
+
+# =============================================================================
+# Standard classificaiton code
+# =============================================================================
+def classify(model_name, X_train, y_train, X_test, N_POS=2396):
+    # Sklear classifiers
+    if classifiers[model_name] != None:
+        model = clone(classifiers[model_name])
+        model.fit(X_train, y_train)
+        y_proba = model.predict_proba(X_test)
+        assert(y_proba.shape[1] == 2)
+        y_proba = y_proba[:,1]
+        y_proba_train = model.predict_proba(X_train)
+        y_proba_train = y_proba_train[:,1]
+    
+    # LSTM
+    if model_name == "LSTM":
+        X_train = X_train.reshape((X_train.shape[0], N_POS, -1))
+        X_test = X_test.reshape((X_test.shape[0], N_POS, -1))
+        model = make_LSTM(X_train, y_train, N_POS=N_POS)
+        model.fit(X_train, y_train, epochs=10, batch_size=64)
+        y_proba = model.predict_proba(X_test)
+        y_proba_train = model.predict_proba(X_train)
+    
     return y_proba, y_proba_train
 
 # =============================================================================
@@ -414,7 +463,7 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
 
-def evaluate(y_proba, y_test, y_proba_train, y_train, model_name="", verbose=False):
+def evaluate(y_proba, y_test, y_proba_train, y_train, model_name="", verbose=True):
     # PR curve
     precision, recall, thresholds = precision_recall_curve(y_test, y_proba)
     ap = average_precision_score(y_test, y_proba)
@@ -427,7 +476,11 @@ def evaluate(y_proba, y_test, y_proba_train, y_train, model_name="", verbose=Fal
     
     # ROC curve
     fpr, tpr, thresholds = roc_curve(y_test, y_proba)
-    auc = roc_auc_score(y_test, y_proba)
+    try:
+        auc = roc_auc_score(y_test, y_proba)
+    except ValueError:
+        auc = 0
+        
 #    fig, ax = plt.subplots()
 #    ax.plot(fpr, tpr)
 #    ax.set(xlabel='False positive rate', ylabel='True positive rate', title=model_name + ' (AUC=%.3f)' % (auc,))
@@ -536,7 +589,7 @@ for train, test in kfold.split(X[sp['non-human']], y[sp['non-human']], species[s
         Y_proba[model_name].extend(y_proba)
     
         # Embedding representation
-        y_proba, y_proba_train = classify(model_name, X_emb_train, y_train, X_emb_test)
+        y_proba, y_proba_train = classify(model_name, X_emb_train, y_train, X_emb_test, N_POS=2560)
         results = evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
         output.append((model_name, i, 'emb') + results)
         Y_proba_emb[model_name].extend(y_proba)
@@ -570,7 +623,7 @@ for key in Y_proba.keys(): # Loop over model types
 plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
-plt.legend(loc='upper right', fontsize=7)
+plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
 plt.savefig("pooledPR_7_fold.jpg", dpi=400)
 plt.clf()
 
@@ -607,7 +660,7 @@ for train, test in kfold.split(X, y, species): # start by splitting only non-hum
     X_emb_train = X_emb[train]
     X_emb_test = X_emb[test]
     y_train = y[train]
-    y_test = y_test
+    y_test = y[test]
     
     # Shuffle arrays
     X_train, X_emb_train, y_train = shuffle(X_train, X_emb_train, y_train)
@@ -621,8 +674,6 @@ for train, test in kfold.split(X, y, species): # start by splitting only non-hum
     
     print("*******************FOLD %i: %s*******************" % (i, human_virus_species_list[i]))
     print("Test size = %i" % (len(y_test),))
-    print("Test non-human size = %i" % (len(X[sp['non-human']][test])),)
-    print("Test human size = %i" % (len(X[sp[i]]),))
     print("Test pos class prevalence: %.3f" % (np.mean(y_test),))
     
     
@@ -634,7 +685,7 @@ for train, test in kfold.split(X, y, species): # start by splitting only non-hum
         Y_proba[model_name].extend(y_proba)
     
         # Embedding representation
-        y_proba, y_proba_train = classify(model_name, X_emb_train, y_train, X_emb_test)
+        y_proba, y_proba_train = classify(model_name, X_emb_train, y_train, X_emb_test, N_POS=2560)
         results = evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
         output.append((model_name, i, 'emb') + results)
         Y_proba_emb[model_name].extend(y_proba)
@@ -668,5 +719,5 @@ for key in Y_proba.keys(): # Loop over model types
 plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
-plt.legend(loc='upper right', fontsize=6)
+plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
 plt.savefig("pooledPR_bad_split_7_fold.jpg", dpi=400)
