@@ -145,24 +145,24 @@ or is the S2 domain only.
 This file is saved as "split_seqs.faa".
 """
 
-#def reformat_seq(string, i=1518):
-#    """
-#    Takes a string and an index i. Returns the string without gap character '-'
-#    and the index in the resulting string corresponding to the index i in the
-#    original string.
-#    """
-#    
-#    # Advance index to first non-gap character
-#    while string[i] == '-':
-#        i += 1
-#    
-#    # Count gap characters before i
-#    offset = string[:i].count('-')
-#    
-#    # Remove gap chars
-#    string = string.replace('-','')
-#    
-#    return string, i-offset
+def reformat_seq(string, i=1518):
+    """
+    Takes a string and an index i. Returns the string without gap character '-'
+    and the index in the resulting string corresponding to the index i in the
+    original string.
+    """
+    
+    # Advance index to first non-gap character
+    while string[i] == '-':
+        i += 1
+    
+    # Count gap characters before i
+    offset = string[:i].count('-')
+    
+    # Remove gap chars
+    string = string.replace('-','')
+    
+    return string, i-offset
 #
 #from Bio.Seq import Seq
 #from Bio.SeqRecord import SeqRecord
@@ -357,8 +357,8 @@ We now have human_virus_species_list and sp dictionary as defined above.
 ## =============================================================================
 
 # Standard split as in Kuzmin paper
-from sklearn.model_selection import train_test_split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+#from sklearn.model_selection import train_test_split
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
 #from keras.models import Sequential
 #from keras.layers import LSTM
@@ -371,6 +371,31 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random
 #
 #model = Sequential()
 #model.add(Bidirectional(LSTM(64), input_shape = (N_POS, num_features)))
+#model.add(Dense(16, activation='relu'))
+#model.add(Dense(1, activation='sigmoid'))
+#model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+#
+## Train model
+#model.fit(X_train, y_train, epochs=10, batch_size=64)
+#
+#_, acc = model.evaluate(X_test.reshape((X_test.shape[0], N_POS, -1)), y_test, verbose=0)
+#print('Test Accuracy: %.2f' % (acc*100))
+
+#from keras.models import Sequential
+#from keras.layers import Conv1D
+#from keras.layers import MaxPooling1D
+#from keras.layers import Flatten
+#from keras.layers import Dense
+#
+#
+#n = X_train.shape[0]
+#X_train = X_train.reshape((n, N_POS, -1))
+#num_features = X_train.shape[2]
+#
+#model = Sequential()
+#model.add(Conv1D(filters=32, kernel_size=5, input_shape=(N_POS, num_features)))
+#model.add(MaxPooling1D(pool_size=5))
+#model.add(Flatten())
 #model.add(Dense(16, activation='relu'))
 #model.add(Dense(1, activation='sigmoid'))
 #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -400,8 +425,9 @@ classifiers = {"SVM": SVC(probability = True, gamma = 'scale', random_state = 42
                  "Decision Tree": DecisionTreeClassifier(random_state = 42),
                  "Random Forest": RandomForestClassifier(n_estimators = 500, max_leaf_nodes = 15, 
                                                          n_jobs= -1, random_state = 42),
-                 "ZeroR": DummyClassifier(strategy='constant', constant=1),
-                 "LSTM": None}
+                 "Baseline": DummyClassifier(strategy='constant', constant=1),
+                 "LSTM": None,
+                 "CNN": None}
 
 # =============================================================================
 # Define additional classifiers
@@ -410,6 +436,9 @@ from keras.models import Sequential
 from keras.layers import LSTM
 from keras.layers import Dense
 from keras.layers import Bidirectional
+from keras.layers import Conv1D
+from keras.layers import MaxPooling1D
+from keras.layers import Flatten
 
 def make_LSTM(X_train, y_train, N_POS):   
     n = X_train.shape[0]
@@ -422,6 +451,21 @@ def make_LSTM(X_train, y_train, N_POS):
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
+    return model
+
+def make_CNN(X_train, y_train, N_POS):
+    n = X_train.shape[0]
+    X_train = X_train.reshape((n, N_POS, -1))
+    num_features = X_train.shape[2]
+    
+    model = Sequential()
+    model.add(Conv1D(filters=32, kernel_size=5, input_shape=(N_POS, num_features)))
+    model.add(MaxPooling1D(pool_size=5))
+    model.add(Flatten())
+    model.add(Dense(16, activation='relu'))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    
     return model
 
 # =============================================================================
@@ -438,14 +482,14 @@ def classify(model_name, X_train, y_train, X_test, N_POS=2396):
         y_proba_train = model.predict_proba(X_train)
         y_proba_train = y_proba_train[:,1]
     
-    # LSTM
-    if model_name == "LSTM":
+    # Keras classifiers
+    if model_name == "LSTM" or model_name == "CNN":
         X_train = X_train.reshape((X_train.shape[0], N_POS, -1))
         X_test = X_test.reshape((X_test.shape[0], N_POS, -1))
         model = make_LSTM(X_train, y_train, N_POS=N_POS)
         model.fit(X_train, y_train, epochs=10, batch_size=64)
         y_proba = model.predict_proba(X_test)
-        y_proba_train = model.predict_proba(X_train)
+        y_proba_train = model.predict_proba(X_train)        
     
     return y_proba, y_proba_train
 
@@ -624,7 +668,7 @@ plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
 plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
-plt.savefig("pooledPR_7_fold.jpg", dpi=400)
+plt.savefig("pooledPR_7_fold.jpg", dpi=400, bbox_inches = "tight")
 plt.clf()
 
 # =============================================================================
@@ -653,7 +697,7 @@ for model_name in classifiers:
 #Y_TEST = []
 
 
-for train, test in kfold.split(X, y, species): # start by splitting only non-human data    
+for train, test in kfold.split(X, y):
     # Create train and test arrays by concatenation
     X_train = X[train]
     X_test = X[test]
@@ -720,4 +764,55 @@ plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
 plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
-plt.savefig("pooledPR_bad_split_7_fold.jpg", dpi=400)
+plt.savefig("pooledPR_bad_split_7_fold.jpg", dpi=400, bbox_inches = "tight")
+plt.clf()
+
+# =============================================================================
+# Feature Importance from LR
+# =============================================================================
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+
+model = LogisticRegression(C = 30.0, class_weight = 'balanced', solver = 'newton-cg', multi_class = 'multinomial', n_jobs = -1, random_state = 42)
+model.fit(X,y)
+
+importance = np.array(model.coef_[0])
+
+# Compute composite score at each position in multiple alignment
+importance = np.split(importance, N_POS) # split into arrays of values for each position
+composite_imps = []
+for array in importance:
+    composite_imps.append(np.linalg.norm(array)**2)
+composite_imps = np.array(composite_imps)
+composite_imps = composite_imps / np.sum(composite_imps)
+    
+# List top 10 positions
+temp = np.argsort(-composite_imps)
+for t in temp[:10]:
+    print("Position %i importance: %.3f" % (t, composite_imps[t]))
+
+# Draw plot
+plt.bar([i for i in range(len(composite_imps))], composite_imps, edgecolor='black', color='green')
+plt.savefig("LR_features.jpg", dpi=400, bbox_inches = "tight")
+plt.show()
+
+# Investigate positions in human sequence
+for entry in sequences:
+    if entry.accession_number == 'QIQ49832':
+        seq = str(entry.sequence)
+
+for t in temp[:10]:
+    try:
+        _, pos = reformat_seq(seq, t)
+    except IndexError:
+        pos = 'Not present'
+    pos = str(pos)
+    print("Position %s importance: %.3f" % (pos, composite_imps[t]))
+
+"""    
+Compare to benchling
+
+291, 327, 359: all near the start of the recepter binding region
+
+"""
