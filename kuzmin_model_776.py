@@ -2,11 +2,12 @@
 """
 Created on Fri Feb 12 08:24:31 2021
 
-@author: NBOLLIG
 """
+import numpy as np
 
 # =============================================================================
 # Create Kuzmin dataset
+# This section is adapted from ***
 # =============================================================================
 from Bio import SeqIO # some BioPython that will come in handy
 
@@ -121,10 +122,7 @@ def EncodeAndTarget(list_of_sequences):
 # =============================================================================
 # Use all sequences for training/testing a model
 # =============================================================================
-import numpy as np
-
 training_sequences = sequences
-
 
 # =============================================================================
 # Analysis to get split point for embedding representation of sequence fragments
@@ -312,6 +310,10 @@ We now have the following aligned arrays:
     training_sequences
     
 """
+
+# Randomize ordering
+from sklearn.utils import shuffle
+X, X_emb, y, species, deflines, training_sequences = shuffle(X, X_emb, y, species, deflines, training_sequences)
 
 # =============================================================================
 # Compute index sets
@@ -568,7 +570,6 @@ def evaluate(y_proba, y_test, y_proba_train, y_train, model_name="", verbose=Tru
 # MAIN - Cross-validation with species-aware splitting
 # =============================================================================
 import pandas as pd
-from sklearn.utils import shuffle
 from sklearn.model_selection import GroupKFold
 
 kfold = GroupKFold(n_splits=7)
@@ -678,7 +679,7 @@ print("Now doing standard splitting...")
 
 from sklearn.model_selection import KFold
 
-kfold = KFold(n_splits=7)
+kfold = KFold(n_splits=7, shuffle=True)
 
 Y_targets = []
 output = []
