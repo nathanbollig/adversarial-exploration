@@ -5,10 +5,18 @@ Created on Fri Feb 12 08:24:31 2021
 """
 import numpy as np
 
+"""
 # =============================================================================
-# Create Kuzmin dataset
-# This section is adapted from ***
+Create Kuzmin dataset
+
+This section is adapted from https://github.com/facebookresearch/esm
+
+Kuzmin K, Adeniyi AE, DaSouza AK, Lim D, Nguyen H, Molina NR, et al. Machine learning methods 
+accurately predict host specificity of coronaviruses based on spike sequences alone. 
+Biochem Biophys Res Commun. 2020;533: 553–558. doi:10.1016/j.bbrc.2020.09.010
+
 # =============================================================================
+"""
 from Bio import SeqIO # some BioPython that will come in handy
 
 # Read the fasta-file and create a dictionary of its protein sequences
@@ -180,7 +188,7 @@ def reformat_seq(string, i=1518):
 #SeqIO.write(records, "split_seqs.faa", "fasta")
 
 # =============================================================================
-# Get data for raw sequence data
+# Get raw sequence encodings
 # =============================================================================
 N_POS = 2396
 N_CHAR = 25
@@ -191,7 +199,7 @@ y = np.array(y)
 species = np.array(species)
 
 # =============================================================================
-# Get data for embeddings from file (produced externally)
+# Get embeddings from file (produced externally)
 # =============================================================================
 import pickle
 with open('embeddings.pkl', 'rb') as f:
@@ -471,7 +479,7 @@ def make_CNN(X_train, y_train, N_POS):
     return model
 
 # =============================================================================
-# Standard classificaiton code
+# Standard classification code
 # =============================================================================
 def classify(model_name, X_train, y_train, X_test, N_POS=2396):
     # Sklear classifiers
@@ -558,13 +566,6 @@ def evaluate(y_proba, y_test, y_proba_train, y_train, model_name="", verbose=Tru
     
     return ap, auc, train_accuracy, train_recall, train_precision, train_f1, test_accuracy, test_recall, test_precision, test_f1
     
-## =============================================================================
-## MAIN - Train and evaluate models
-## =============================================================================
-#
-#for model_name in classifiers:
-#    y_proba, y_proba_train = classify(model_name, X_train, y_train, X_test)
-#    evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
 
 # =============================================================================
 # MAIN - Cross-validation with species-aware splitting
