@@ -4,6 +4,7 @@ Created on Fri Feb 12 08:24:31 2021
 
 """
 import numpy as np
+import pickle
 
 """
 # =============================================================================
@@ -670,8 +671,12 @@ plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
 plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
-plt.savefig("pooledPR_7_fold.jpg", dpi=400, bbox_inches = "tight")
+#plt.savefig("pooledPR_7_fold.jpg", dpi=400, bbox_inches = "tight")
 plt.clf()
+
+# Save data
+data = (Y_proba, Y_proba_emb, Y_targets)
+pickle.dump(data, open( "data_group_7_fold.p", "wb" ))
 
 # =============================================================================
 # MAIN - CV with standard splitting
@@ -766,8 +771,12 @@ plt.xlabel('Recall')
 plt.ylabel('Precision')
 plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
 plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
-plt.savefig("pooledPR_bad_split_7_fold.jpg", dpi=400, bbox_inches = "tight")
+#plt.savefig("pooledPR_bad_split_7_fold.jpg", dpi=400, bbox_inches = "tight")
 plt.clf()
+
+# Save data
+data = (Y_proba, Y_proba_emb, Y_targets)
+pickle.dump(data, open( "data_bad_split_7_fold.p", "wb" ))
 
 # =============================================================================
 # Feature Importance from LR
@@ -796,7 +805,7 @@ for t in temp[:10]:
 
 # Draw plot
 plt.bar([i for i in range(len(composite_imps))], composite_imps, edgecolor='black', color='green')
-plt.savefig("LR_features.jpg", dpi=400, bbox_inches = "tight")
+#plt.savefig("LR_features.jpg", dpi=400, bbox_inches = "tight")
 plt.show()
 
 # Investigate positions in human sequence
@@ -818,3 +827,121 @@ Compare to benchling
 291, 327, 359: all near the start of the recepter binding region
 
 """
+
+# =============================================================================
+# Extra figures
+# =============================================================================
+# Simple split
+file = open('data_bad_split_7_fold.p', 'rb')
+data = pickle.load(file)
+file.close()
+
+Y_proba, Y_proba_emb, Y_targets = data
+
+ap_baseline = average_precision_score(Y_targets, np.ones(len(Y_targets)))
+
+def get_PR(Y_targets, Y_proba):
+    precision, recall, _ = precision_recall_curve(Y_targets, Y_proba)
+    ap = average_precision_score(Y_targets, Y_proba)
+    return precision, recall, ap
+
+for key in Y_proba.keys(): # Loop over model types
+    if key == "Baseline":
+        continue
+    # Raw sequence
+    precision, recall, ap = get_PR(Y_targets, Y_proba[key])
+    plt.step(recall, precision, where='post', label = key + ' (AP=%.2f)' % (ap,) )
+    
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
+plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
+plt.savefig("bad_split_seq_PRs.jpg", dpi=400, bbox_inches = "tight")
+plt.clf()
+
+# Species-aware split
+file = open('data_group_7_fold.p', 'rb')
+data = pickle.load(file)
+file.close()
+
+Y_proba, Y_proba_emb, Y_targets = data
+
+ap_baseline = average_precision_score(Y_targets, np.ones(len(Y_targets)))
+
+def get_PR(Y_targets, Y_proba):
+    precision, recall, _ = precision_recall_curve(Y_targets, Y_proba)
+    ap = average_precision_score(Y_targets, Y_proba)
+    return precision, recall, ap
+
+for key in Y_proba.keys(): # Loop over model types
+    if key == "Baseline":
+        continue
+    # Raw sequence
+    precision, recall, ap = get_PR(Y_targets, Y_proba[key])
+    plt.step(recall, precision, where='post', label = key + ' (AP=%.2f)' % (ap,) )
+    
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
+plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
+plt.savefig("group_split_seq_PRs.jpg", dpi=400, bbox_inches = "tight")
+plt.clf()
+
+# Species-aware split + Transformer embeddings
+file = open('data_group_7_fold.p', 'rb')
+data = pickle.load(file)
+file.close()
+
+Y_proba, Y_proba_emb, Y_targets = data
+
+ap_baseline = average_precision_score(Y_targets, np.ones(len(Y_targets)))
+
+def get_PR(Y_targets, Y_proba):
+    precision, recall, _ = precision_recall_curve(Y_targets, Y_proba)
+    ap = average_precision_score(Y_targets, Y_proba)
+    return precision, recall, ap
+
+for key in Y_proba.keys(): # Loop over model types
+    if key == "Baseline":
+        continue
+    # Embedding
+    precision, recall, ap = get_PR(Y_targets, Y_proba_emb[key])
+    plt.step(recall, precision, where='post', label = key + ' (AP=%.2f)' % (ap,) )
+    
+# Generate figure
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
+plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
+plt.savefig("group_split_emb_PRs.jpg", dpi=400, bbox_inches = "tight")
+plt.clf()
+
+# Bare legend
+file = open('data_group_7_fold.p', 'rb')
+data = pickle.load(file)
+file.close()
+
+Y_proba, Y_proba_emb, Y_targets = data
+
+ap_baseline = average_precision_score(Y_targets, np.ones(len(Y_targets)))
+
+def get_PR(Y_targets, Y_proba):
+    precision, recall, _ = precision_recall_curve(Y_targets, Y_proba)
+    ap = average_precision_score(Y_targets, Y_proba)
+    return precision, recall, ap
+
+for key in Y_proba.keys(): # Loop over model types
+    if key == "Baseline":
+        continue
+    # Embedding
+    precision, recall, ap = get_PR(Y_targets, Y_proba_emb[key])
+    plt.step(recall, precision, where='post', label = key)
+    
+# Generate figure
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baseline,))
+plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
+plt.savefig("bare_legend.jpg", dpi=400, bbox_inches = "tight")
+plt.clf()
+
