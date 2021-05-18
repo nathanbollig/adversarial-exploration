@@ -391,7 +391,7 @@ We now have human_virus_species_list and sp dictionary as defined above.
 #
 #_, acc = model.evaluate(X_test.reshape((X_test.shape[0], N_POS, -1)), y_test, verbose=0)
 #print('Test Accuracy: %.2f' % (acc*100))
-
+#
 #from keras.models import Sequential
 #from keras.layers import Conv1D
 #from keras.layers import MaxPooling1D
@@ -410,7 +410,7 @@ We now have human_virus_species_list and sp dictionary as defined above.
 #model.add(Dense(16, activation='relu'))
 #model.add(Dense(1, activation='sigmoid'))
 #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-#
+
 ## Train model
 #model.fit(X_train, y_train, epochs=10, batch_size=64)
 #
@@ -518,6 +518,8 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
 
+import time
+
 def evaluate(y_proba, y_test, y_proba_train, y_train, model_name="", verbose=True):
     # PR curve
     precision, recall, thresholds = precision_recall_curve(y_test, y_proba)
@@ -526,7 +528,7 @@ def evaluate(y_proba, y_test, y_proba_train, y_train, model_name="", verbose=Tru
 #    ax.plot(recall, precision)
 #    ax.set(xlabel='Recall', ylabel='Precision', title=model_name + ' (AP=%.3f)' % (ap,))
 #    ax.grid()
-#    #fig.savefig(model_name+"_pr_curve.jpg", dpi=500)
+#    fig.savefig(model_name+"%i_pr_curve.jpg" % (int(time.time()),), dpi=500)
 #    plt.show()
     
     # ROC curve
@@ -567,6 +569,17 @@ def evaluate(y_proba, y_test, y_proba_train, y_train, model_name="", verbose=Tru
     
     return ap, auc, train_accuracy, train_recall, train_precision, train_f1, test_accuracy, test_recall, test_precision, test_f1
     
+# =============================================================================
+# Eval of LSTM PR curves
+# =============================================================================
+temp_classifiers = {}
+temp_classifiers["LSTM"] = classifiers["LSTM"]
+temp_classifiers["Baseline"] = classifiers["Baseline"]
+
+classifiers = temp_classifiers
+
+# Also uncomment PR curve in eval to see fold-specific curves
+# Uncomment data for testing
 
 # =============================================================================
 # MAIN - Cross-validation with species-aware splitting
@@ -643,6 +656,31 @@ for train, test in kfold.split(X[sp['non-human']], y[sp['non-human']], species[s
     
     Y_targets.extend(y_test)
     i += 1
+
+"""
+For inspection of single-fold classification behavior. 
+
+1. Get train, test from kfold generator:
+    gen = kfold.split(X[sp['non-human']], y[sp['non-human']], species[sp['non-human']])
+    train,test = next(gen) # repeat for higher folds
+
+2. Do a single-fold run by running inner loop code above.
+
+3. Run the following after the single-fold run.
+
+    yp = list(y_proba.ravel())
+    yt = y_test
+    yp, yt = zip(*sorted(zip(yp, yt), reverse=True))
+
+Now we have ranked y_proba and parallel true labels in yt.
+
+Use the following function to determine species of instance at index i.
+"""
+def _get_sp(i):
+    i_y = list(y_proba.ravel()).index(yp[i]) # index of y_proba in y_test
+    x = X_test[i_y] # instance
+    i_x = np.where((X == x).all(axis=1))[0].item() # index of instance in X
+    return species[i_x]
 
 print("*******************SUMMARY*******************")
 
