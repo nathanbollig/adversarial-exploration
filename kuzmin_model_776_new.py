@@ -367,10 +367,10 @@ We now have human_virus_species_list and sp dictionary as defined above.
 ## Single Split Approach - For Testing
 ## =============================================================================
 
-# Standard split as in Kuzmin paper
+## Standard split as in Kuzmin paper
 #from sklearn.model_selection import train_test_split
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
-
+#
 #from keras.models import Sequential
 #from keras.layers import LSTM
 #from keras.layers import Dense
@@ -392,6 +392,30 @@ We now have human_virus_species_list and sp dictionary as defined above.
 #_, acc = model.evaluate(X_test.reshape((X_test.shape[0], N_POS, -1)), y_test, verbose=0)
 #print('Test Accuracy: %.2f' % (acc*100))
 #
+#from sklearn.metrics import roc_curve
+#from sklearn.metrics import roc_auc_score
+#import matplotlib.pyplot as plt
+#
+## ROC curve
+#y_proba = model.predict(X_test.reshape((X_test.shape[0], N_POS, -1)))
+#fpr, tpr, thresholds = roc_curve(y_test, y_proba)
+#try:
+#    auc = roc_auc_score(y_test, y_proba)
+#except ValueError:
+#    auc = 0
+#    
+#fig, ax = plt.subplots()
+#ax.plot(fpr, tpr)
+#ax.set(xlabel='False positive rate', ylabel='True positive rate', title=model_name + ' (AUC=%.3f)' % (auc,))
+#ax.grid()
+##fig.savefig(model_name + "_roc_curve.jpg", dpi=500)
+#plt.show()
+#
+#
+#
+#
+#
+#
 #from keras.models import Sequential
 #from keras.layers import Conv1D
 #from keras.layers import MaxPooling1D
@@ -410,7 +434,7 @@ We now have human_virus_species_list and sp dictionary as defined above.
 #model.add(Dense(16, activation='relu'))
 #model.add(Dense(1, activation='sigmoid'))
 #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
+#
 ## Train model
 #model.fit(X_train, y_train, epochs=10, batch_size=64)
 #
@@ -572,11 +596,11 @@ def evaluate(y_proba, y_test, y_proba_train, y_train, model_name="", verbose=Tru
 # =============================================================================
 # Eval of LSTM PR curves
 # =============================================================================
-temp_classifiers = {}
-temp_classifiers["LSTM"] = classifiers["LSTM"]
-temp_classifiers["Baseline"] = classifiers["Baseline"]
-
-classifiers = temp_classifiers
+#temp_classifiers = {}
+#temp_classifiers["LSTM"] = classifiers["LSTM"]
+#temp_classifiers["Baseline"] = classifiers["Baseline"]
+#
+#classifiers = temp_classifiers
 
 # Also uncomment PR curve in eval to see fold-specific curves
 # Uncomment data for testing
@@ -649,10 +673,10 @@ for train, test in kfold.split(X[sp['non-human']], y[sp['non-human']], species[s
         Y_proba[model_name].extend(y_proba)
     
         # Embedding representation
-        y_proba, y_proba_train = classify(model_name, X_emb_train, y_train, X_emb_test, N_POS=2560)
-        results = evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
-        output.append((model_name, i, 'emb') + results)
-        Y_proba_emb[model_name].extend(y_proba)
+#        y_proba, y_proba_train = classify(model_name, X_emb_train, y_train, X_emb_test, N_POS=2560)
+#        results = evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
+#        output.append((model_name, i, 'emb') + results)
+#        Y_proba_emb[model_name].extend(y_proba)
     
     Y_targets.extend(y_test)
     i += 1
@@ -711,6 +735,26 @@ plt.title('Sequence classification performance; baseline AP=%.3f)' % (ap_baselin
 plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
 #plt.savefig("pooledPR_7_fold.jpg", dpi=400, bbox_inches = "tight")
 plt.clf()
+
+
+## Pooled ROC curve
+#from sklearn.metrics import roc_curve
+#from sklearn.metrics import roc_auc_score
+#
+#y_proba = Y_proba['LSTM']
+#fpr, tpr, thresholds = roc_curve(Y_targets, y_proba)
+#try:
+#    auc = roc_auc_score(Y_targets, y_proba)
+#except ValueError:
+#    auc = 0
+#    
+#fig, ax = plt.subplots()
+#ax.plot(fpr, tpr)
+#ax.set(xlabel='False positive rate', ylabel='True positive rate', title=model_name + ' (AUC=%.3f)' % (auc,))
+#ax.grid()
+#fig.savefig("LSTM_roc_curve.jpg", dpi=500)
+#plt.show()
+
 
 # Save data
 data = (Y_proba, Y_proba_emb, Y_targets)
