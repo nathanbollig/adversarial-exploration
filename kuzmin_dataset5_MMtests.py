@@ -330,8 +330,8 @@ x_MM = x_MM.reshape((-1, N_POS, N_CHAR))
 
 # Do a set of mutations
 gamma = 0.1
-cost = 1000
-num_mutations = 10
+cost = 300
+num_mutations = 20
 MM_set = []
 data_set = []
 
@@ -430,69 +430,230 @@ X_train_2d = embedding.fit_transform(D)
 
 # Scatter plot
 import matplotlib.pyplot as plt 
-plt.scatter(X_train_2d[:-(num_mutations+1),0], X_train_2d[:-(num_mutations+1),1], s=40, facecolors='none', edgecolors='grey', alpha=0.6, label="human")
-plt.scatter(X_train_2d[-1,0], X_train_2d[-1,1], s=40, facecolors='none', edgecolors='b', alpha=0.9, label="bat") # bat
-plt.scatter(X_train_2d[-num_mutations:-1,0], X_train_2d[-num_mutations:-1,1], s=40, facecolors='none', edgecolors='r', label="MM bat") # MM bat
+plt.clf()
+#plt.scatter(X_train_2d[:-(num_mutations+1),0], X_train_2d[:-(num_mutations+1),1], s=40, facecolors='none', edgecolors='grey', alpha=0.6, label="human")
+plt.scatter(X_train_2d[-num_mutations:-1,0], X_train_2d[-num_mutations:-1,1], s=80, facecolors='none', alpha=0.9, edgecolors='red', label="MM bat") # MM bat
+plt.scatter(X_train_2d[-1,0], X_train_2d[-1,1], s=80, color='blue', facecolors='none', alpha=0.9, label="bat") # bat
 plt.legend()
-plt.title("MDS representation of training sequences")
-plt.savefig('mds_bat_to_MM_bat_new.jpg', dpi=400)
+plt.title("MDS of %i trajectories; gamma=%.1e, C=%i" % (num_mutations, gamma, cost))
+#plt.savefig('mds_bat_to_MM_bat_new.jpg', dpi=400)
 
-
-# =============================================================================
-# Human seq clustering
-# =============================================================================
-D_human = D[:-(num_mutations+1),:-(num_mutations+1)]
-
-embedding = MDS(n_components=2, dissimilarity='precomputed')
-X_train_2d = embedding.fit_transform(D_human)
-
-
+# Plot Clusters
 species = []
 for entry in training_sequences:
     species.append(entry.virus_species)
 species = np.delete(species, index_list)
 
-from sklearn.cluster import KMeans
+X = X_train_2d[:-(num_mutations+1), :]
 
-kmeans = KMeans(n_clusters=6, init ='k-means++', max_iter=300, n_init=10, random_state=0)
-
-
-y_kmeans = kmeans.fit_predict(X_train_2d)
-
-X = X_train_2d
-plt.scatter(X[y_kmeans==0, 0], X[y_kmeans==0, 1], s=100, edgecolors='red', facecolors='none',label ='Cluster 1')
-plt.scatter(X[y_kmeans==1, 0], X[y_kmeans==1, 1], s=100, edgecolors='blue', facecolors='none',label ='Cluster 2')
-plt.scatter(X[y_kmeans==2, 0], X[y_kmeans==2, 1], s=100, edgecolors='green', facecolors='none',label ='Cluster 3')
-plt.scatter(X[y_kmeans==3, 0], X[y_kmeans==3, 1], s=100, edgecolors='yellow', facecolors='none',label ='Cluster 4')
-plt.scatter(X[y_kmeans==4, 0], X[y_kmeans==4, 1], s=100, edgecolors='orange', facecolors='none',label ='Cluster 5')
-plt.scatter(X[y_kmeans==5, 0], X[y_kmeans==5, 1], s=100, edgecolors='black', facecolors='none',label ='Cluster 6')
+sp = 'Human_coronavirus_HKU1'
+plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='red', facecolors='none',label = sp)
+sp = 'Betacoronavirus_1'
+plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='dodgerblue', facecolors='none',label = sp)
+sp = 'Middle_East_respiratory_syndrome_coronavirus'
+plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='orange', facecolors='none',label = sp)
+sp = 'Human_coronavirus_NL63'
+plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='yellow', facecolors='none',label = sp)
+sp = 'Human_coronavirus_229E'
+plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='green', facecolors='none',label = sp)
+sp = 'Severe_acute_respiratory_syndrome_related_coronavirus'
+plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='lightgrey', facecolors='none',label = sp)
+sp = 'Human_coronavirus_HKU1'
+plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='grey', facecolors='none',label = sp)
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.savefig('clusters.jpg', dpi=400)
 plt.tight_layout()
-plt.savefig('human_clusters.jpg', dpi=400)
+plt.savefig('clusters_legend.jpg', dpi=400)
 
-from collections import Counter
 
-for cluster in range(6):
-    sp_list = []
-    print("Cluster %i:" % (cluster+1,))
-    for i in range(X.shape[0]):
-        if y_kmeans[i] == cluster:
-            sp_list.append(species[i])
+# =============================================================================
+# Loop over multiple experiments
+# =============================================================================
+
+# TODO
+def trial(num_mutations=20, gamma=0.1, cost=300, name=''):
+    # Do a set of mutations
+    MM_set = []
+    data_set = []
     
-    for key,val in Counter(sp_list).items():
-        print("%s: %i" % (key, val))
-            
+    for i in range(num_mutations):
+        print("Trajectory %i" % (i,))
+        x_MM, data = greedy_flip(x_bat, 0, aa_vocab, model, generator=None, n_positions=N_POS, n_characters=N_CHAR, confidence_threshold = 0.9, weights = MatrixInfo.blosum62, gamma=gamma, cost=cost)
+        x_MM = encode_as_one_hot(x_MM, n_positions=N_POS, n_characters=N_CHAR)
+        x_MM = x_MM.reshape((-1, N_POS, N_CHAR))
+        MM_set.append(x_MM)
+        data_set.append(data)
+    
+    # Get pairwise training set similarities (not distances)
+    D_train = np.loadtxt('train_distances_last_col_zeros.csv')
+    D_train = D_train[:-1, :-1]
+    
+    
+    # Add a column and row for each new MM seq
+    MM_similarities = []
+    for i in range(num_mutations):
+        sims = []
+        # sims to training set
+        for j in range(len(X_train_original)):
+            x_encoded = X_train_original[j]
+            sim = sim_score(x_encoded, MM_set[i], N_POS=2396, N_CHAR=25)
+            sims.append(sim)
+        # sims to MM set seqs
+        for k in range(num_mutations):
+            sim = sim_score(MM_set[k], MM_set[i], N_POS=2396, N_CHAR=25)
+            sims.append(sim)
+        MM_similarities.append(sims)
+    
+    MM = np.array(MM_similarities).T
+    D_top = np.append(D_train, MM[:len(X_train_original), :], axis=1)
+    D = np.append(D_top, MM.T, axis=0)
+    assert(np.allclose(D, D.T) == True)
+    
+    # Add original bat
+    sims = []
+    # sims to training set
+    for j in range(len(X_train_original)):
+        x_encoded = X_train_original[j]
+        sim = sim_score(x_encoded, x_bat, N_POS=2396, N_CHAR=25)
+        sims.append(sim)
+    # sims to MM set seqs
+    for k in range(num_mutations):
+        sim = sim_score(MM_set[k], x_bat, N_POS=2396, N_CHAR=25)
+        sims.append(sim)
+    # bat sim to itself (artifact: the training set sims were 0 along diagonal, will be fixed)
+    sims.append(1.0)
+    
+    # Add column and row for original bat
+    sims = np.array(sims).reshape(-1,1)
+    D_top = np.append(D, sims[:-1, :], axis=1)
+    D = np.append(D_top, sims.T, axis=0)
+    assert(np.allclose(D, D.T) == True)
+    
+    # Convert sims to distances by inverting sign and adding max sim
+    # If needed for reading from train_distances_last_col_zeros.csv
+    max_sim = float('-inf')
+    for i in range(D.shape[0]):
+        for j in range(i+1, D.shape[1]):
+            if sim > max_sim:
+                max_sim = sim
+    
+    for i in range(D.shape[0]):
+        for j in range(i+1, D.shape[1]):
+            D[i,j] = -D[i,j] + max_sim
+            D[j,i] = -D[j,i] + max_sim
+    
+    # Force diagonal is all 0
+    np.fill_diagonal(D, 0)
+    
+    # Filter out non-humans
+    index_list = []
+    for i in range(len(X_train_original)):
+        entry = training_sequences[i]
+        if entry.host_species != 'Human':
+            index_list.append(i)
+    
+    
+    D = np.delete(D, index_list, 0)
+    D = np.delete(D, index_list, 1)
+    
+    # Set up MDS
+    from sklearn.manifold import MDS
+    embedding = MDS(n_components=2, dissimilarity='precomputed')
+    X_train_2d = embedding.fit_transform(D)
+    
+    # Scatter plot
+    import matplotlib.pyplot as plt 
+    plt.clf()
+    #plt.scatter(X_train_2d[:-(num_mutations+1),0], X_train_2d[:-(num_mutations+1),1], s=40, facecolors='none', edgecolors='grey', alpha=0.6, label="human")
+    plt.scatter(X_train_2d[-num_mutations:-1,0], X_train_2d[-num_mutations:-1,1], s=80, facecolors='none', alpha=0.9, edgecolors='red', label="MM bat") # MM bat
+    plt.scatter(X_train_2d[-1,0], X_train_2d[-1,1], s=80, color='blue', facecolors='none', alpha=0.9, label="bat") # bat
+    plt.legend()
+    plt.title("MDS of %i trajectories; gamma=%.1e, C=%i" % (num_mutations, gamma, cost))
+    #plt.savefig('mds_bat_to_MM_bat_new.jpg', dpi=400)
+    
+    # Plot Clusters
+    species = []
+    for entry in training_sequences:
+        species.append(entry.virus_species)
+    species = np.delete(species, index_list)
+    
+    X = X_train_2d[:-(num_mutations+1), :]
+    
+    sp = 'Human_coronavirus_HKU1'
+    plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='red', facecolors='none',label = sp)
+    sp = 'Betacoronavirus_1'
+    plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='dodgerblue', facecolors='none',label = sp)
+    sp = 'Middle_East_respiratory_syndrome_coronavirus'
+    plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='orange', facecolors='none',label = sp)
+    sp = 'Human_coronavirus_NL63'
+    plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='yellow', facecolors='none',label = sp)
+    sp = 'Human_coronavirus_229E'
+    plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='green', facecolors='none',label = sp)
+    sp = 'Severe_acute_respiratory_syndrome_related_coronavirus'
+    plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='lightgrey', facecolors='none',label = sp)
+    sp = 'Human_coronavirus_HKU1'
+    plt.scatter(X[species==sp, 0], X[species==sp, 1], s=20, edgecolors='grey', facecolors='none',label = sp)
+    lgd = plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.savefig(name+'_clusters.jpg', dpi=400, bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+
+names = ['C100', 'C200', 'C300', 'C400', 'C500']
+Cs = [100, 200, 300, 400, 500]
+for i in range(len(names)):
+    trial(cost = Cs[i], name=names[i])
 
 
 
+## =============================================================================
+## Human seq clustering
+## =============================================================================
+#D_human = D[:-(num_mutations+1),:-(num_mutations+1)]
+#
+#embedding = MDS(n_components=2, dissimilarity='precomputed')
+#X_train_2d = embedding.fit_transform(D_human)
+#
+#
+#species = []
+#for entry in training_sequences:
+#    species.append(entry.virus_species)
+#species = np.delete(species, index_list)
+#
+#from sklearn.cluster import KMeans
+#
+#kmeans = KMeans(n_clusters=6, init ='k-means++', max_iter=300, n_init=10, random_state=0)
+#
+#
+#y_kmeans = kmeans.fit_predict(X_train_2d)
+#
+#X = X_train_2d
+#plt.scatter(X[y_kmeans==0, 0], X[y_kmeans==0, 1], s=100, edgecolors='red', facecolors='none',label ='Cluster 1')
+#plt.scatter(X[y_kmeans==1, 0], X[y_kmeans==1, 1], s=100, edgecolors='blue', facecolors='none',label ='Cluster 2')
+#plt.scatter(X[y_kmeans==2, 0], X[y_kmeans==2, 1], s=100, edgecolors='green', facecolors='none',label ='Cluster 3')
+#plt.scatter(X[y_kmeans==3, 0], X[y_kmeans==3, 1], s=100, edgecolors='yellow', facecolors='none',label ='Cluster 4')
+#plt.scatter(X[y_kmeans==4, 0], X[y_kmeans==4, 1], s=100, edgecolors='orange', facecolors='none',label ='Cluster 5')
+#plt.scatter(X[y_kmeans==5, 0], X[y_kmeans==5, 1], s=100, edgecolors='black', facecolors='none',label ='Cluster 6')
+#plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+#plt.tight_layout()
+#plt.savefig('human_clusters.jpg', dpi=400)
+#
+#from collections import Counter
+#
+#for cluster in range(6):
+#    sp_list = []
+#    print("Cluster %i:" % (cluster+1,))
+#    for i in range(X.shape[0]):
+#        if y_kmeans[i] == cluster:
+#            sp_list.append(species[i])
+#    
+#    for key,val in Counter(sp_list).items():
+#        print("%s: %i" % (key, val))
+#            
 
 
 
-
-
-
-
-
+# =============================================================================
+# Old code
+# =============================================================================
 
 
 #
