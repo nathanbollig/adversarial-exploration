@@ -1,0 +1,851 @@
+import pandas as pd
+   ...: from sklearn.model_selection import GroupKFold
+   ...: 
+   ...: kfold = GroupKFold(n_splits=7)
+   ...: 
+   ...: Y_targets = []
+   ...: output = []
+   ...: i=0
+   ...: Y_proba = {}
+   ...: Y_proba_emb = {}
+   ...: for model_name in classifiers:
+   ...:     Y_proba[model_name] = []
+   ...:     Y_proba_emb[model_name] = []
+   ...: 
+   ...: 
+   ...: 
+   ...: # Collect data for testing
+   ...: X_TRAIN = []
+   ...: X_TEST = []
+   ...: Y_TRAIN = []
+   ...: Y_TEST = []
+   ...: 
+   ...: 
+   ...: for train, test in kfold.split(X[sp['non-human']], y[sp['non-human']], species[sp['non-human']]): # start by splitting only non-human data
+   ...:     # Put the ith human-infecting virus species into the test set, the rest into train
+   ...:     # Get indices of training species
+   ...:     training_species = [k for k in [0,1,2,3,4,5,6] if k != i]
+   ...:     training_species_idx = []
+   ...:     for j in training_species:
+   ...:         training_species_idx.extend(sp[j])
+   ...:     
+   ...:     # Create train and test arrays by concatenation
+   ...:     X_train = np.vstack((X[sp['non-human']][train], X[training_species_idx]))
+   ...:     X_test = np.vstack((X[sp['non-human']][test], X[sp[i]]))
+   ...:     y_train = np.concatenate((y[sp['non-human']][train], y[training_species_idx]))
+   ...:     y_test = np.concatenate((y[sp['non-human']][test], y[sp[i]]))
+   ...:     
+   ...:     # Shuffle arrays
+   ...:     X_train, y_train = shuffle(X_train, y_train)
+   ...:     X_test, y_test = shuffle(X_test, y_test)
+   ...:     
+   ...:     # Store data for testing
+   ...:     X_TRAIN.append(X_train)
+   ...:     X_TEST.append(X_test)
+   ...:     Y_TRAIN.append(y_train)
+   ...:     Y_TEST.append(y_test)
+   ...:     
+   ...:     print("*******************FOLD %i: %s*******************" % (i, human_virus_species_list[i]))
+   ...:     print("Test size = %i" % (len(y_test),))
+   ...:     print("Test non-human size = %i" % (len(X[sp['non-human']][test])),)
+   ...:     print("Test human size = %i" % (len(X[sp[i]]),))
+   ...:     print("Test pos class prevalence: %.3f" % (np.mean(y_test),))
+   ...:     
+   ...:     
+   ...:     for model_name in classifiers:
+   ...:         print("Training %s..." % (model_name,))
+   ...:         
+   ...:         # Raw sequence representation
+   ...:         y_proba, y_proba_train = classify(model_name, X_train, y_train, X_test)
+   ...:         results = evaluate(y_proba, y_test, y_proba_train, y_train, model_name)
+   ...:         output.append((model_name, i, 'raw seq') + results)
+   ...:         Y_proba[model_name].extend(y_proba)
+   ...:     
+   ...:     Y_targets.extend(y_test)
+   ...:     i += 1
+*******************FOLD 0: Severe_acute_respiratory_syndrome_related_coronavirus*******************
+Test size = 301
+Test non-human size = 282
+Test human size = 19
+Test pos class prevalence: 0.063
+Training SVM...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+SVM Train Accuracy: 99.15
+SVM Train Recall: 99.77
+SVM Train Precision: 98.44
+SVM Train F1: 99.11
+SVM Test Accuracy: 93.69
+SVM Test Recall: 0.00
+SVM Test Precision: 0.00
+SVM Test F1: 0.00
+Training Logistic Regression...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+Logistic Regression Train Accuracy: 100.00
+Logistic Regression Train Recall: 100.00
+Logistic Regression Train Precision: 100.00
+Logistic Regression Train F1: 100.00
+Logistic Regression Test Accuracy: 93.69
+Logistic Regression Test Recall: 0.00
+Logistic Regression Test Precision: 0.00
+Logistic Regression Test F1: 0.00
+Training Decision Tree...
+Decision Tree Train Accuracy: 100.00
+Decision Tree Train Recall: 100.00
+Decision Tree Train Precision: 100.00
+Decision Tree Train F1: 100.00
+Decision Tree Test Accuracy: 93.69
+Decision Tree Test Recall: 5.26
+Decision Tree Test Precision: 50.00
+Decision Tree Test F1: 9.52
+Training Random Forest...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+Random Forest Train Accuracy: 99.25
+Random Forest Train Recall: 100.00
+Random Forest Train Precision: 98.45
+Random Forest Train F1: 99.22
+Random Forest Test Accuracy: 93.69
+Random Forest Test Recall: 0.00
+Random Forest Test Precision: 0.00
+Random Forest Test F1: 0.00
+Training Baseline...
+Baseline Train Accuracy: 47.39
+Baseline Train Recall: 100.00
+Baseline Train Precision: 47.39
+Baseline Train F1: 64.30
+Baseline Test Accuracy: 6.31
+Baseline Test Recall: 100.00
+Baseline Test Precision: 6.31
+Baseline Test F1: 11.87
+Training LSTM...
+Epoch 1/10
+937/937 [==============================] - 56s 60ms/step - loss: 0.6827 - acc: 0.7962
+Epoch 2/10
+937/937 [==============================] - 58s 62ms/step - loss: 0.6281 - acc: 0.6820
+Epoch 3/10
+937/937 [==============================] - 58s 62ms/step - loss: 0.4677 - acc: 0.8677
+Epoch 4/10
+937/937 [==============================] - 60s 64ms/step - loss: 0.5780 - acc: 0.8549
+Epoch 5/10
+937/937 [==============================] - 58s 61ms/step - loss: 0.2573 - acc: 0.9146
+Epoch 6/10
+937/937 [==============================] - 56s 60ms/step - loss: 0.2200 - acc: 0.9338
+Epoch 7/10
+937/937 [==============================] - 58s 62ms/step - loss: 0.1927 - acc: 0.9274
+Epoch 8/10
+937/937 [==============================] - 57s 60ms/step - loss: 0.1773 - acc: 0.9413
+Epoch 9/10
+937/937 [==============================] - 56s 60ms/step - loss: 0.1693 - acc: 0.9392
+Epoch 10/10
+937/937 [==============================] - 57s 61ms/step - loss: 0.1559 - acc: 0.9456
+LSTM Train Accuracy: 94.98
+LSTM Train Recall: 95.50
+LSTM Train Precision: 94.01
+LSTM Train F1: 94.75
+LSTM Test Accuracy: 97.01
+LSTM Test Recall: 52.63
+LSTM Test Precision: 100.00
+LSTM Test F1: 68.97
+Training CNN...
+Epoch 1/10
+937/937 [==============================] - 56s 59ms/step - loss: 0.6811 - acc: 0.6190
+Epoch 2/10
+937/937 [==============================] - 54s 58ms/step - loss: 0.5761 - acc: 0.8271
+Epoch 3/10
+937/937 [==============================] - 57s 60ms/step - loss: 0.4662 - acc: 0.8943
+Epoch 4/10
+937/937 [==============================] - 56s 60ms/step - loss: 0.3483 - acc: 0.8698
+Epoch 5/10
+937/937 [==============================] - 56s 60ms/step - loss: 0.2769 - acc: 0.8954
+Epoch 6/10
+937/937 [==============================] - 54s 58ms/step - loss: 0.2128 - acc: 0.9232
+Epoch 7/10
+937/937 [==============================] - 55s 59ms/step - loss: 0.1649 - acc: 0.9402
+Epoch 8/10
+937/937 [==============================] - 57s 60ms/step - loss: 0.1495 - acc: 0.9509
+Epoch 9/10
+937/937 [==============================] - 54s 58ms/step - loss: 0.1573 - acc: 0.9509
+Epoch 10/10
+937/937 [==============================] - 54s 58ms/step - loss: 0.1388 - acc: 0.9584
+CNN Train Accuracy: 95.09
+CNN Train Recall: 95.72
+CNN Train Precision: 94.03
+CNN Train F1: 94.87
+CNN Test Accuracy: 99.34
+CNN Test Recall: 89.47
+CNN Test Precision: 100.00
+CNN Test F1: 94.44
+*******************FOLD 1: Human_coronavirus_NL63*******************
+Test size = 294
+Test non-human size = 268
+Test human size = 26
+Test pos class prevalence: 0.088
+Training SVM...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+SVM Train Accuracy: 99.05
+SVM Train Recall: 99.77
+SVM Train Precision: 98.20
+SVM Train F1: 98.98
+SVM Test Accuracy: 91.16
+SVM Test Recall: 0.00
+SVM Test Precision: 0.00
+SVM Test F1: 0.00
+Training Logistic Regression...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+Logistic Regression Train Accuracy: 100.00
+Logistic Regression Train Recall: 100.00
+Logistic Regression Train Precision: 100.00
+Logistic Regression Train F1: 100.00
+Logistic Regression Test Accuracy: 91.16
+Logistic Regression Test Recall: 0.00
+Logistic Regression Test Precision: 0.00
+Logistic Regression Test F1: 0.00
+Training Decision Tree...
+Decision Tree Train Accuracy: 100.00
+Decision Tree Train Recall: 100.00
+Decision Tree Train Precision: 100.00
+Decision Tree Train F1: 100.00
+Decision Tree Test Accuracy: 100.00
+Decision Tree Test Recall: 100.00
+Decision Tree Test Precision: 100.00
+Decision Tree Test F1: 100.00
+Training Random Forest...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+Random Forest Train Accuracy: 99.15
+Random Forest Train Recall: 100.00
+Random Forest Train Precision: 98.20
+Random Forest Train F1: 99.09
+Random Forest Test Accuracy: 91.16
+Random Forest Test Recall: 0.00
+Random Forest Test Precision: 0.00
+Random Forest Test F1: 0.00
+Training Baseline...
+Baseline Train Accuracy: 46.29
+Baseline Train Recall: 100.00
+Baseline Train Precision: 46.29
+Baseline Train F1: 63.29
+Baseline Test Accuracy: 8.84
+Baseline Test Recall: 100.00
+Baseline Test Precision: 8.84
+Baseline Test F1: 16.25
+Training LSTM...
+Epoch 1/10
+944/944 [==============================] - 56s 59ms/step - loss: 0.6839 - acc: 0.5456
+Epoch 2/10
+944/944 [==============================] - 56s 59ms/step - loss: 0.6604 - acc: 0.6197
+Epoch 3/10
+944/944 [==============================] - 55s 58ms/step - loss: 0.5502 - acc: 0.8114
+Epoch 4/10
+944/944 [==============================] - 55s 58ms/step - loss: 0.3785 - acc: 0.8739
+Epoch 5/10
+944/944 [==============================] - 56s 60ms/step - loss: 0.9922 - acc: 0.6960
+Epoch 6/10
+944/944 [==============================] - 60s 64ms/step - loss: 0.7234 - acc: 0.5699
+Epoch 7/10
+944/944 [==============================] - 54s 57ms/step - loss: 0.6081 - acc: 0.8877
+Epoch 8/10
+944/944 [==============================] - 57s 60ms/step - loss: 0.4768 - acc: 0.8803
+Epoch 9/10
+944/944 [==============================] - 55s 58ms/step - loss: 0.3073 - acc: 0.9004
+Epoch 10/10
+944/944 [==============================] - 55s 59ms/step - loss: 0.2922 - acc: 0.8972
+LSTM Train Accuracy: 93.64
+LSTM Train Recall: 92.68
+LSTM Train Precision: 93.53
+LSTM Train F1: 93.10
+LSTM Test Accuracy: 87.07
+LSTM Test Recall: 3.85
+LSTM Test Precision: 7.14
+LSTM Test F1: 5.00
+Training CNN...
+Epoch 1/10
+944/944 [==============================] - 54s 58ms/step - loss: 0.6915 - acc: 0.5095
+Epoch 2/10
+944/944 [==============================] - 55s 58ms/step - loss: 0.6541 - acc: 0.5371
+Epoch 3/10
+944/944 [==============================] - 55s 58ms/step - loss: 0.5572 - acc: 0.6663
+Epoch 4/10
+944/944 [==============================] - 56s 59ms/step - loss: 0.4568 - acc: 0.8432
+Epoch 5/10
+944/944 [==============================] - 54s 57ms/step - loss: 0.5093 - acc: 0.8305
+Epoch 6/10
+944/944 [==============================] - 52s 55ms/step - loss: 0.3353 - acc: 0.9089
+Epoch 7/10
+944/944 [==============================] - 55s 58ms/step - loss: 0.1978 - acc: 0.9428
+Epoch 8/10
+944/944 [==============================] - 54s 57ms/step - loss: 0.1764 - acc: 0.9481
+Epoch 9/10
+944/944 [==============================] - 54s 57ms/step - loss: 0.2595 - acc: 0.9068
+Epoch 10/10
+944/944 [==============================] - 56s 60ms/step - loss: 0.2032 - acc: 0.9258
+CNN Train Accuracy: 92.37
+CNN Train Recall: 93.36
+CNN Train Precision: 90.47
+CNN Train F1: 91.89
+CNN Test Accuracy: 82.65
+CNN Test Recall: 0.00
+CNN Test Precision: 0.00
+CNN Test F1: 0.00
+*******************FOLD 2: SARS_CoV_2*******************
+Test size = 114
+Test non-human size = 66
+Test human size = 48
+Test pos class prevalence: 0.421
+Training SVM...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+SVM Train Accuracy: 99.38
+SVM Train Recall: 99.76
+SVM Train Precision: 98.57
+SVM Train F1: 99.16
+SVM Test Accuracy: 57.89
+SVM Test Recall: 0.00
+SVM Test Precision: 0.00
+SVM Test F1: 0.00
+Training Logistic Regression...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+Logistic Regression Train Accuracy: 100.00
+Logistic Regression Train Recall: 100.00
+Logistic Regression Train Precision: 100.00
+Logistic Regression Train F1: 100.00
+Logistic Regression Test Accuracy: 57.89
+Logistic Regression Test Recall: 0.00
+Logistic Regression Test Precision: 0.00
+Logistic Regression Test F1: 0.00
+Training Decision Tree...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+Decision Tree Train Accuracy: 100.00
+Decision Tree Train Recall: 100.00
+Decision Tree Train Precision: 100.00
+Decision Tree Train F1: 100.00
+Decision Tree Test Accuracy: 57.89
+Decision Tree Test Recall: 0.00
+Decision Tree Test Precision: 0.00
+Decision Tree Test F1: 0.00
+Training Random Forest...
+Random Forest Train Accuracy: 99.47
+Random Forest Train Recall: 100.00
+Random Forest Train Precision: 98.57
+Random Forest Train F1: 99.28
+Random Forest Test Accuracy: 100.00
+Random Forest Test Recall: 100.00
+Random Forest Test Precision: 100.00
+Random Forest Test F1: 100.00
+Training Baseline...
+Baseline Train Accuracy: 36.92
+Baseline Train Recall: 100.00
+Baseline Train Precision: 36.92
+Baseline Train F1: 53.93
+Baseline Test Accuracy: 42.11
+Baseline Test Recall: 100.00
+Baseline Test Precision: 42.11
+Baseline Test F1: 59.26
+Training LSTM...
+Epoch 1/10
+1124/1124 [==============================] - 69s 62ms/step - loss: 0.6837 - acc: 0.6023
+Epoch 2/10
+1124/1124 [==============================] - 65s 58ms/step - loss: 0.6074 - acc: 0.6308
+Epoch 3/10
+1124/1124 [==============================] - 65s 58ms/step - loss: 0.5013 - acc: 0.7135
+Epoch 4/10
+1124/1124 [==============================] - 64s 57ms/step - loss: 0.4898 - acc: 0.8665
+Epoch 5/10
+1124/1124 [==============================] - 67s 60ms/step - loss: 0.3659 - acc: 0.9217
+Epoch 6/10
+1124/1124 [==============================] - 66s 58ms/step - loss: 0.2345 - acc: 0.9208
+Epoch 7/10
+1124/1124 [==============================] - 65s 58ms/step - loss: 0.1749 - acc: 0.9359
+Epoch 8/10
+1124/1124 [==============================] - 66s 59ms/step - loss: 0.1338 - acc: 0.9502
+Epoch 9/10
+1124/1124 [==============================] - 64s 57ms/step - loss: 0.1160 - acc: 0.9698
+Epoch 10/10
+1124/1124 [==============================] - 65s 58ms/step - loss: 0.1118 - acc: 0.9689
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+LSTM Train Accuracy: 96.62
+LSTM Train Recall: 95.90
+LSTM Train Precision: 94.99
+LSTM Train F1: 95.44
+LSTM Test Accuracy: 57.89
+LSTM Test Recall: 0.00
+LSTM Test Precision: 0.00
+LSTM Test F1: 0.00
+Training CNN...
+Epoch 1/10
+1124/1124 [==============================] - 68s 61ms/step - loss: 0.6764 - acc: 0.6059
+Epoch 2/10
+1124/1124 [==============================] - 65s 58ms/step - loss: 0.5555 - acc: 0.6352
+Epoch 3/10
+1124/1124 [==============================] - 66s 59ms/step - loss: 0.4731 - acc: 0.7642
+Epoch 4/10
+1124/1124 [==============================] - 66s 58ms/step - loss: 0.3468 - acc: 0.9208
+Epoch 5/10
+1124/1124 [==============================] - 68s 61ms/step - loss: 0.2927 - acc: 0.9190
+Epoch 6/10
+1124/1124 [==============================] - 65s 58ms/step - loss: 0.2327 - acc: 0.9181
+Epoch 7/10
+1124/1124 [==============================] - 68s 60ms/step - loss: 0.1718 - acc: 0.9342
+Epoch 8/10
+1124/1124 [==============================] - 65s 58ms/step - loss: 0.1565 - acc: 0.9404
+Epoch 9/10
+1124/1124 [==============================] - 67s 60ms/step - loss: 0.1284 - acc: 0.9555
+Epoch 10/10
+1124/1124 [==============================] - 66s 59ms/step - loss: 0.1321 - acc: 0.9555
+CNN Train Accuracy: 94.48
+CNN Train Recall: 93.25
+CNN Train Precision: 91.92
+CNN Train F1: 92.58
+CNN Test Accuracy: 59.65
+CNN Test Recall: 4.17
+CNN Test Precision: 100.00
+CNN Test F1: 8.00
+*******************FOLD 3: Middle_East_respiratory_syndrome_coronavirus*******************
+Test size = 187
+Test non-human size = 40
+Test human size = 147
+Test pos class prevalence: 0.786
+Training SVM...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+SVM Train Accuracy: 99.71
+SVM Train Recall: 100.00
+SVM Train Precision: 99.06
+SVM Train F1: 99.53
+SVM Test Accuracy: 21.39
+SVM Test Recall: 0.00
+SVM Test Precision: 0.00
+SVM Test F1: 0.00
+Training Logistic Regression...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+Logistic Regression Train Accuracy: 100.00
+Logistic Regression Train Recall: 100.00
+Logistic Regression Train Precision: 100.00
+Logistic Regression Train F1: 100.00
+Logistic Regression Test Accuracy: 21.39
+Logistic Regression Test Recall: 0.00
+Logistic Regression Test Precision: 0.00
+Logistic Regression Test F1: 0.00
+Training Decision Tree...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+Decision Tree Train Accuracy: 100.00
+Decision Tree Train Recall: 100.00
+Decision Tree Train Precision: 100.00
+Decision Tree Train F1: 100.00
+Decision Tree Test Accuracy: 21.39
+Decision Tree Test Recall: 0.00
+Decision Tree Test Precision: 0.00
+Decision Tree Test F1: 0.00
+Training Random Forest...
+C:\Program Files\Python36\lib\site-packages\sklearn\metrics\_classification.py:1272: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+Random Forest Train Accuracy: 99.71
+Random Forest Train Recall: 100.00
+Random Forest Train Precision: 99.06
+Random Forest Train F1: 99.53
+Random Forest Test Accuracy: 21.39
+Random Forest Test Recall: 0.00
+Random Forest Test Precision: 0.00
+Random Forest Test F1: 0.00
+Training Baseline...
+Baseline Train Accuracy: 30.07
+Baseline Train Recall: 100.00
+Baseline Train Precision: 30.07
+Baseline Train F1: 46.23
+Baseline Test Accuracy: 78.61
+Baseline Test Recall: 100.00
+Baseline Test Precision: 78.61
+Baseline Test F1: 88.02
+Training LSTM...
+Epoch 1/10
+1051/1051 [==============================] - 60s 57ms/step - loss: 0.6830 - acc: 0.6870
+Epoch 2/10
+1051/1051 [==============================] - 59s 56ms/step - loss: 0.5955 - acc: 0.6993
+Epoch 3/10
+1051/1051 [==============================] - 60s 57ms/step - loss: 0.5767 - acc: 0.6993
+Epoch 4/10
+ 320/1051 [========>.....................] - ETA: 41s - loss: 0.4729 - acc: 0.7281 
+Epoch 4/10
+1051/1051 [==============================] - 62s 59ms/step - loss: 0.4259 - acc: 0.7916
+Epoch 5/10
+1051/1051 [==============================] - 62s 59ms/step - loss: 0.2576 - acc: 0.9049
+Epoch 6/10
+1051/1051 [==============================] - 63s 60ms/step - loss: 0.1388 - acc: 0.9534
+Epoch 7/10
+1051/1051 [==============================] - 64s 61ms/step - loss: 0.1051 - acc: 0.9676
+Epoch 8/10
+1051/1051 [==============================] - 61s 58ms/step - loss: 0.1113 - acc: 0.9638
+Epoch 9/10
+1051/1051 [==============================] - 62s 59ms/step - loss: 0.0863 - acc: 0.9772
+Epoch 10/10
+1051/1051 [==============================] - 58s 55ms/step - loss: 0.2765 - acc: 0.8944
+LSTM Train Accuracy: 82.78
+LSTM Train Recall: 56.33
+LSTM Train Precision: 80.54
+LSTM Train F1: 66.29
+LSTM Test Accuracy: 97.33
+LSTM Test Recall: 97.28
+LSTM Test Precision: 99.31
+LSTM Test F1: 98.28
+Training CNN...
+Epoch 1/10
+1051/1051 [==============================] - 63s 60ms/step - loss: 0.6623 - acc: 0.6936
+Epoch 2/10
+1051/1051 [==============================] - 59s 56ms/step - loss: 0.5387 - acc: 0.6993
+Epoch 3/10
+1051/1051 [==============================] - 60s 57ms/step - loss: 0.4047 - acc: 0.7412
+Epoch 4/10
+1051/1051 [==============================] - 59s 56ms/step - loss: 0.3102 - acc: 0.9286
+Epoch 5/10
+1051/1051 [==============================] - 63s 60ms/step - loss: 0.2374 - acc: 0.9401
+Epoch 6/10
+1051/1051 [==============================] - 62s 59ms/step - loss: 0.1496 - acc: 0.9534
+Epoch 7/10
+1051/1051 [==============================] - 57s 54ms/step - loss: 0.1053 - acc: 0.9696
+Epoch 8/10
+1051/1051 [==============================] - 60s 57ms/step - loss: 0.0899 - acc: 0.9753
+Epoch 9/10
+1051/1051 [==============================] - 58s 55ms/step - loss: 0.0812 - acc: 0.9781
+Epoch 10/10
+1051/1051 [==============================] - 58s 56ms/step - loss: 0.0810 - acc: 0.9753
+CNN Train Accuracy: 97.91
+CNN Train Recall: 99.68
+CNN Train Precision: 93.75
+CNN Train F1: 96.63
+CNN Test Accuracy: 96.26
+CNN Test Recall: 95.24
+CNN Test Precision: 100.00
+CNN Test F1: 97.56
+*******************FOLD 4: Betacoronavirus_1*******************
+Test size = 224
+Test non-human size = 40
+Test human size = 184
+Test pos class prevalence: 0.821
+Training SVM...
+SVM Train Accuracy: 99.80
+SVM Train Recall: 100.00
+SVM Train Precision: 99.29
+SVM Train F1: 99.64
+SVM Test Accuracy: 15.62
+SVM Test Recall: 0.00
+SVM Test Precision: 0.00
+SVM Test F1: 0.00
+Training Logistic Regression...
+Logistic Regression Train Accuracy: 100.00
+Logistic Regression Train Recall: 100.00
+Logistic Regression Train Precision: 100.00
+Logistic Regression Train F1: 100.00
+Logistic Regression Test Accuracy: 15.62
+Logistic Regression Test Recall: 0.00
+Logistic Regression Test Precision: 0.00
+Logistic Regression Test F1: 0.00
+Training Decision Tree...
+Decision Tree Train Accuracy: 100.00
+Decision Tree Train Recall: 100.00
+Decision Tree Train Precision: 100.00
+Decision Tree Train F1: 100.00
+Decision Tree Test Accuracy: 15.62
+Decision Tree Test Recall: 0.00
+Decision Tree Test Precision: 0.00
+Decision Tree Test F1: 0.00
+Training Random Forest...
+Random Forest Train Accuracy: 99.90
+Random Forest Train Recall: 100.00
+Random Forest Train Precision: 99.64
+Random Forest Train F1: 99.82
+Random Forest Test Accuracy: 15.62
+Random Forest Test Recall: 0.00
+Random Forest Test Precision: 0.00
+Random Forest Test F1: 0.00
+Training Baseline...
+Baseline Train Accuracy: 27.51
+Baseline Train Recall: 100.00
+Baseline Train Precision: 27.51
+Baseline Train F1: 43.16
+Baseline Test Accuracy: 82.14
+Baseline Test Recall: 100.00
+Baseline Test Precision: 82.14
+Baseline Test F1: 90.20
+Training LSTM...
+Epoch 1/10
+1014/1014 [==============================] - 56s 56ms/step - loss: 0.6532 - acc: 0.7022
+Epoch 2/10
+1014/1014 [==============================] - 56s 56ms/step - loss: 0.5495 - acc: 0.7249
+Epoch 3/10
+1014/1014 [==============================] - 58s 58ms/step - loss: 0.5256 - acc: 0.7249
+Epoch 4/10
+1014/1014 [==============================] - 56s 55ms/step - loss: 0.4330 - acc: 0.7249
+Epoch 5/10
+1014/1014 [==============================] - 58s 57ms/step - loss: 0.2959 - acc: 0.9172
+Epoch 6/10
+1014/1014 [==============================] - 59s 58ms/step - loss: 0.2451 - acc: 0.9418
+Epoch 7/10
+1014/1014 [==============================] - 58s 57ms/step - loss: 0.6159 - acc: 0.7988
+Epoch 8/10
+1014/1014 [==============================] - 61s 60ms/step - loss: 0.2518 - acc: 0.9093
+Epoch 9/10
+1014/1014 [==============================] - 59s 58ms/step - loss: 0.1820 - acc: 0.9181
+Epoch 10/10
+1014/1014 [==============================] - 58s 58ms/step - loss: 0.1548 - acc: 0.9398
+LSTM Train Accuracy: 94.58
+LSTM Train Recall: 92.83
+LSTM Train Precision: 88.10
+LSTM Train F1: 90.40
+LSTM Test Accuracy: 95.09
+LSTM Test Recall: 100.00
+LSTM Test Precision: 94.36
+LSTM Test F1: 97.10
+Training CNN...
+Epoch 1/10
+1014/1014 [==============================] - 62s 61ms/step - loss: 0.6668 - acc: 0.6943
+Epoch 2/10
+1014/1014 [==============================] - 61s 60ms/step - loss: 0.5591 - acc: 0.7249
+Epoch 3/10
+1014/1014 [==============================] - 57s 56ms/step - loss: 0.7198 - acc: 0.7249
+Epoch 4/10
+1014/1014 [==============================] - 60s 59ms/step - loss: 0.6142 - acc: 0.7249
+Epoch 5/10
+1014/1014 [==============================] - 58s 57ms/step - loss: 0.5085 - acc: 0.7249
+Epoch 6/10
+1014/1014 [==============================] - 61s 60ms/step - loss: 0.5690 - acc: 0.6262
+Epoch 7/10
+1014/1014 [==============================] - 57s 57ms/step - loss: 0.8524 - acc: 0.7396
+Epoch 8/10
+1014/1014 [==============================] - 56s 56ms/step - loss: 0.5280 - acc: 0.7959
+Epoch 9/10
+1014/1014 [==============================] - 56s 56ms/step - loss: 0.5615 - acc: 0.6864
+Epoch 10/10
+1014/1014 [==============================] - 57s 56ms/step - loss: 0.4467 - acc: 0.8185
+CNN Train Accuracy: 91.42
+CNN Train Recall: 83.87
+CNN Train Precision: 84.78
+CNN Train F1: 84.32
+CNN Test Accuracy: 94.64
+CNN Test Recall: 98.37
+CNN Test Precision: 95.26
+CNN Test F1: 96.79
+*******************FOLD 5: Human_coronavirus_HKU1*******************
+Test size = 61
+Test non-human size = 40
+Test human size = 21
+Test pos class prevalence: 0.344
+Training SVM...
+SVM Train Accuracy: 99.58
+SVM Train Recall: 99.77
+SVM Train Precision: 99.10
+SVM Train F1: 99.44
+SVM Test Accuracy: 80.33
+SVM Test Recall: 100.00
+SVM Test Precision: 63.64
+SVM Test F1: 77.78
+Training Logistic Regression...
+Logistic Regression Train Accuracy: 100.00
+Logistic Regression Train Recall: 100.00
+Logistic Regression Train Precision: 100.00
+Logistic Regression Train F1: 100.00
+Logistic Regression Test Accuracy: 85.25
+Logistic Regression Test Recall: 100.00
+Logistic Regression Test Precision: 70.00
+Logistic Regression Test F1: 82.35
+Training Decision Tree...
+Decision Tree Train Accuracy: 100.00
+Decision Tree Train Recall: 100.00
+Decision Tree Train Precision: 100.00
+Decision Tree Train F1: 100.00
+Decision Tree Test Accuracy: 44.26
+Decision Tree Test Recall: 0.00
+Decision Tree Test Precision: 0.00
+Decision Tree Test F1: 0.00
+Training Random Forest...
+Random Forest Train Accuracy: 99.75
+Random Forest Train Recall: 100.00
+Random Forest Train Precision: 99.33
+Random Forest Train F1: 99.66
+Random Forest Test Accuracy: 80.33
+Random Forest Test Recall: 100.00
+Random Forest Test Precision: 63.64
+Random Forest Test F1: 77.78
+Training Baseline...
+Baseline Train Accuracy: 37.55
+Baseline Train Recall: 100.00
+Baseline Train Precision: 37.55
+Baseline Train F1: 54.60
+Baseline Test Accuracy: 34.43
+Baseline Test Recall: 100.00
+Baseline Test Precision: 34.43
+Baseline Test F1: 51.22
+Training LSTM...
+Epoch 1/10
+1177/1177 [==============================] - 71s 60ms/step - loss: 0.6703 - acc: 0.6262
+Epoch 2/10
+1177/1177 [==============================] - 68s 58ms/step - loss: 0.4772 - acc: 0.7689
+Epoch 3/10
+1177/1177 [==============================] - 65s 55ms/step - loss: 0.3124 - acc: 0.8802
+Epoch 4/10
+1177/1177 [==============================] - 66s 56ms/step - loss: 0.2605 - acc: 0.9235
+Epoch 5/10
+1177/1177 [==============================] - 68s 58ms/step - loss: 1.0494 - acc: 0.6389
+Epoch 6/10
+1177/1177 [==============================] - 67s 57ms/step - loss: 0.5934 - acc: 0.6916
+Epoch 7/10
+1177/1177 [==============================] - 68s 58ms/step - loss: 0.4240 - acc: 0.7995
+Epoch 8/10
+1177/1177 [==============================] - 66s 56ms/step - loss: 0.2214 - acc: 0.9448
+Epoch 9/10
+1177/1177 [==============================] - 68s 57ms/step - loss: 0.1385 - acc: 0.9550
+Epoch 10/10
+1177/1177 [==============================] - 65s 55ms/step - loss: 0.0991 - acc: 0.9737
+LSTM Train Accuracy: 97.37
+LSTM Train Recall: 95.25
+LSTM Train Precision: 97.68
+LSTM Train F1: 96.45
+LSTM Test Accuracy: 67.21
+LSTM Test Recall: 100.00
+LSTM Test Precision: 51.22
+LSTM Test F1: 67.74
+Training CNN...
+Epoch 1/10
+1177/1177 [==============================] - 68s 58ms/step - loss: 0.6703 - acc: 0.6075
+Epoch 2/10
+1177/1177 [==============================] - 67s 57ms/step - loss: 0.6325 - acc: 0.6270
+Epoch 3/10
+1177/1177 [==============================] - 68s 58ms/step - loss: 0.4744 - acc: 0.8700
+Epoch 4/10
+1177/1177 [==============================] - 65s 55ms/step - loss: 0.2896 - acc: 0.9269
+Epoch 5/10
+1177/1177 [==============================] - 67s 57ms/step - loss: 0.1488 - acc: 0.9533
+Epoch 6/10
+1177/1177 [==============================] - 66s 56ms/step - loss: 0.0865 - acc: 0.9754
+Epoch 7/10
+1177/1177 [==============================] - 65s 55ms/step - loss: 0.1290 - acc: 0.9618
+Epoch 8/10
+1177/1177 [==============================] - 64s 55ms/step - loss: 0.1019 - acc: 0.9694
+Epoch 9/10
+1177/1177 [==============================] - 68s 58ms/step - loss: 0.0933 - acc: 0.9737
+Epoch 10/10
+1177/1177 [==============================] - 65s 55ms/step - loss: 0.1051 - acc: 0.9686
+CNN Train Accuracy: 98.13
+CNN Train Recall: 99.10
+CNN Train Precision: 96.05
+CNN Train F1: 97.55
+CNN Test Accuracy: 75.41
+CNN Test Recall: 100.00
+CNN Test Precision: 58.33
+CNN Test F1: 73.68
+*******************FOLD 6: Human_coronavirus_229E*******************
+Test size = 57
+Test non-human size = 39
+Test human size = 18
+Test pos class prevalence: 0.316
+Training SVM...
+SVM Train Accuracy: 99.58
+SVM Train Recall: 99.78
+SVM Train Precision: 99.11
+SVM Train F1: 99.44
+SVM Test Accuracy: 50.88
+SVM Test Recall: 0.00
+SVM Test Precision: 0.00
+SVM Test F1: 0.00
+Training Logistic Regression...
+Logistic Regression Train Accuracy: 100.00
+Logistic Regression Train Recall: 100.00
+Logistic Regression Train Precision: 100.00
+Logistic Regression Train F1: 100.00
+Logistic Regression Test Accuracy: 49.12
+Logistic Regression Test Recall: 0.00
+Logistic Regression Test Precision: 0.00
+Logistic Regression Test F1: 0.00
+Training Decision Tree...
+Decision Tree Train Accuracy: 100.00
+Decision Tree Train Recall: 100.00
+Decision Tree Train Precision: 100.00
+Decision Tree Train F1: 100.00
+Decision Tree Test Accuracy: 50.88
+Decision Tree Test Recall: 0.00
+Decision Tree Test Precision: 0.00
+Decision Tree Test F1: 0.00
+Training Random Forest...
+Random Forest Train Accuracy: 100.00
+Random Forest Train Recall: 100.00
+Random Forest Train Precision: 100.00
+Random Forest Train F1: 100.00
+Random Forest Test Accuracy: 49.12
+Random Forest Test Recall: 0.00
+Random Forest Test Precision: 0.00
+Random Forest Test F1: 0.00
+Training Baseline...
+Baseline Train Accuracy: 37.68
+Baseline Train Recall: 100.00
+Baseline Train Precision: 37.68
+Baseline Train F1: 54.74
+Baseline Test Accuracy: 31.58
+Baseline Test Recall: 100.00
+Baseline Test Precision: 31.58
+Baseline Test F1: 48.00
+Training LSTM...
+Epoch 1/10
+1181/1181 [==============================] - 70s 59ms/step - loss: 0.6662 - acc: 0.6130
+Epoch 2/10
+1181/1181 [==============================] - 70s 59ms/step - loss: 0.5899 - acc: 0.6926
+Epoch 3/10
+1181/1181 [==============================] - 68s 58ms/step - loss: 0.5123 - acc: 0.7968
+Epoch 4/10
+1181/1181 [==============================] - 68s 58ms/step - loss: 0.3047 - acc: 0.9365
+Epoch 5/10
+1181/1181 [==============================] - 69s 59ms/step - loss: 0.1470 - acc: 0.9653
+Epoch 6/10
+1181/1181 [==============================] - 68s 57ms/step - loss: 0.1529 - acc: 0.9441
+Epoch 7/10
+1181/1181 [==============================] - 69s 59ms/step - loss: 0.0912 - acc: 0.9788
+Epoch 8/10
+1181/1181 [==============================] - 66s 56ms/step - loss: 0.0792 - acc: 0.9771
+Epoch 9/10
+1181/1181 [==============================] - 69s 58ms/step - loss: 0.0736 - acc: 0.9805
+Epoch 10/10
+1181/1181 [==============================] - 70s 59ms/step - loss: 0.0697 - acc: 0.9822
+LSTM Train Accuracy: 98.31
+LSTM Train Recall: 99.55
+LSTM Train Precision: 96.10
+LSTM Train F1: 97.79
+LSTM Test Accuracy: 57.89
+LSTM Test Recall: 5.56
+LSTM Test Precision: 12.50
+LSTM Test F1: 7.69
+Training CNN...
+Epoch 1/10
+1181/1181 [==============================] - 70s 59ms/step - loss: 0.6636 - acc: 0.6224
+Epoch 2/10
+1181/1181 [==============================] - 70s 59ms/step - loss: 0.5529 - acc: 0.7062
+Epoch 3/10
+1181/1181 [==============================] - 68s 58ms/step - loss: 0.4054 - acc: 0.7782
+Epoch 4/10
+1181/1181 [==============================] - 69s 58ms/step - loss: 0.2837 - acc: 0.9390
+Epoch 5/10
+1181/1181 [==============================] - 69s 58ms/step - loss: 0.2141 - acc: 0.9568
+Epoch 6/10
+1181/1181 [==============================] - 70s 59ms/step - loss: 0.1072 - acc: 0.9746
+Epoch 7/10
+1181/1181 [==============================] - 70s 60ms/step - loss: 0.0833 - acc: 0.9729
+Epoch 8/10
+1181/1181 [==============================] - 69s 58ms/step - loss: 0.0947 - acc: 0.9678
+Epoch 9/10
+1181/1181 [==============================] - 69s 59ms/step - loss: 0.0688 - acc: 0.9788
+Epoch 10/10
+1181/1181 [==============================] - 67s 57ms/step - loss: 0.0726 - acc: 0.9763
+CNN Train Accuracy: 97.97
+CNN Train Recall: 99.33
+CNN Train Precision: 95.46
+CNN Train F1: 97.36
+CNN Test Accuracy: 57.89
+CNN Test Recall: 5.56
+CNN Test Precision: 12.50
+CNN Test F1: 7.69
