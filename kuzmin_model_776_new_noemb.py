@@ -437,13 +437,12 @@ from sklearn.model_selection import GroupKFold
 kfold = GroupKFold(n_splits=7)
 
 Y_targets = []
+Y_species = []
 output = []
 i=0
 Y_proba = {}
-Y_proba_emb = {}
 for model_name in classifiers:
     Y_proba[model_name] = []
-    Y_proba_emb[model_name] = []
 
 
 # Collect data for testing
@@ -466,10 +465,11 @@ for train, test in kfold.split(X[sp['non-human']], y[sp['non-human']], species[s
     X_test = np.vstack((X[sp['non-human']][test], X[sp[i]]))
     y_train = np.concatenate((y[sp['non-human']][train], y[training_species_idx]))
     y_test = np.concatenate((y[sp['non-human']][test], y[sp[i]]))
+    y_test_species = np.concatenate((np.zeros((len(test),), dtype=int), np.full((len(y[sp[i]]),) ,i+1, dtype=int) )) # 0 for non-human, 1-based index for human  
     
     # Shuffle arrays
     X_train, y_train = shuffle(X_train, y_train)
-    X_test, y_test = shuffle(X_test, y_test)
+    X_test, y_test, y_test_species = shuffle(X_test, y_test, y_test_species)
     
     # Store data for testing
     X_TRAIN.append(X_train)
@@ -477,7 +477,7 @@ for train, test in kfold.split(X[sp['non-human']], y[sp['non-human']], species[s
     Y_TRAIN.append(y_train)
     Y_TEST.append(y_test)
     
-    print("*******************FOLD %i: %s*******************" % (i, human_virus_species_list[i]))
+    print("*******************FOLD %i: %s*******************" % (i+1, human_virus_species_list[i]))
     print("Test size = %i" % (len(y_test),))
     print("Test non-human size = %i" % (len(X[sp['non-human']][test])),)
     print("Test human size = %i" % (len(X[sp[i]]),))
@@ -494,6 +494,7 @@ for train, test in kfold.split(X[sp['non-human']], y[sp['non-human']], species[s
         Y_proba[model_name].extend(y_proba)
     
     Y_targets.extend(y_test)
+    Y_species.extend(y_test_species)
     i += 1
 
 #"""
@@ -550,12 +551,25 @@ plt.xlabel('False positive rate')
 plt.ylabel('True positive rate')
 plt.title('Sequence classification performance; baseline AUC=%.3f' % (auc_baseline,))
 plt.legend(loc='upper left', fontsize=7, bbox_to_anchor=(1.05, 1))
-plt.savefig("pooledROC_7_fold.jpg", dpi=400, bbox_inches = "tight")
+plt.savefig("pooledROC_7_fold_withsp.jpg", dpi=400, bbox_inches = "tight")
 plt.clf()
 
 # Save data
-data = (Y_proba, Y_targets)
-pickle.dump(data, open( "data_group_7_fold_noemb.p", "wb" ))
+data = (Y_proba, Y_targets, Y_species)
+pickle.dump(data, open( "data_group_7_fold_noemb_withsp.p", "wb" ))
+
+
+# =============================================================================
+# Plot of pred probas
+# =============================================================================
+
+plt.scatter(Y_proba['LSTM'], Y_species, facecolors='none', edgecolors='r')
+plt.xlabel('Predicted probability')
+plt.ylabel('Species')
+plt.title('LSTM Predicted Proability vs. Infecting Species')
+plt.savefig("species_scatter.jpg", dpi=400, bbox_inches = "tight")
+plt.clf()
+
 
 ## =============================================================================
 ## MAIN - CV with standard splitting
